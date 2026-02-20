@@ -1,3 +1,11 @@
+alert("✅ 1. app.js LOADED successfully");
+alert("🔥 2. Starting Firebase now...");
+try {
+    const app = firebase.initializeApp(firebaseConfig);
+    alert("✅ 3. Firebase INITIALIZED OK!");
+} catch (e) {
+    alert("❌ FIREBASE ERROR: " + e.message);
+}
 // app.js
 const firebaseConfig = {
   apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
