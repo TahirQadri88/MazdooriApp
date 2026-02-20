@@ -1,27 +1,7 @@
-// app.js - FINAL FIXED VERSION for iPhone Safari (Tahir - 21 Feb 2026)
-
-alert("✅ 1. app.js LOADED successfully");
-
-window.onload = function() {
-
-    alert("🌐 Page fully loaded - starting Firebase...");
-
-    try {
-        const firebaseConfig = {
-          apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
-          authDomain: "mazdooriapp.firebaseapp.com",
-          projectId: "mazdooriapp",
-          storageBucket: "mazdooriapp.firebasestorage.app",
-          messagingSenderId: "407506330676",
-          appId: "1:407506330676:web:00fdf738e749ecea3c1661"
-        };
-
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        alert("✅ 3. Firebase INITIALIZED successfully!");
-
+const GITHUB_TOKEN = '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';
+const GITHUB_OWNER = 'TahirQadri88';
+const GITHUB_REPO = 'MazdooriApp';
+const GITHUB_FILE_PATH = 'records.json';
         // ==================== ALL APP CODE BELOW ====================
 
         const appId = 'khyber-traders';
