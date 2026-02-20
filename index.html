@@ -7,10 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -23,7 +19,7 @@
             <button id="login-btn">Login</button>
         </div>
 
-        <!-- Main App (Hidden initially) -->
+        <!-- Main App -->
         <div id="main-app" style="display: none;">
             <header>
                 <h1>KHYBER TRADERS</h1>
@@ -43,51 +39,25 @@
                 <input type="date" id="work-date">
                 <div id="fields-container"></div>
                 <button id="save-work-btn">Save My Work</button>
+                <button id="sync-btn" style="margin-top: 1rem; background: #047857; color: white; padding: 12px; border: none; border-radius: 8px; width: 100%;">
+                    Sync to Admin (Internet par dabayein)
+                </button>
             </div>
 
             <!-- Ledger Screen -->
             <div id="ledger-screen" style="display: none;">
                 <h2>Ledger</h2>
-                <label>From Date:</label>
-                <input type="date" id="from-date">
-                <label>To Date:</label>
-                <input type="date" id="to-date">
-                <button id="filter-ledger-btn">Filter</button>
-                <select id="view-mode">
-                    <option value="log">Log Mode</option>
-                    <option value="summary" style="display: none;">Summary Mode (Admin)</option>
-                </select>
+                <button id="pull-btn" style="margin-bottom: 1rem; background: #1e40af; color: white; padding: 10px; border: none; border-radius: 8px; width: 100%;">
+                    Pull Latest from GitHub
+                </button>
                 <div id="ledger-content"></div>
             </div>
 
-            <!-- Admin Panel -->
+            <!-- Admin Panel (optional - keep or remove) -->
             <div id="admin-panel" style="display: none;">
                 <h2>Admin Panel</h2>
-                <!-- User Management -->
-                <section>
-                    <h3>User Management</h3>
-                    <input type="text" id="new-username" placeholder="New Username">
-                    <input type="password" id="new-password" placeholder="New Password">
-                    <button id="add-user-btn">Add User</button>
-                    <div id="users-list"></div>
-                </section>
-                <!-- Item Management -->
-                <section>
-                    <h3>Item Management</h3>
-                    <input type="text" id="new-item-name" placeholder="Item Name">
-                    <select id="new-item-type">
-                        <option value="Labour">Labour</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Supply">Supply</option>
-                    </select>
-                    <input type="number" id="new-item-rate" placeholder="Rate (Rs)">
-                    <button id="add-item-btn">Add Item</button>
-                    <div id="items-list"></div>
-                </section>
+                <p>Coming soon - view all records in GitHub repo</p>
             </div>
-
-            <!-- Export Studio (Hidden) -->
-            <div id="export-studio" style="display: none;"></div>
 
             <footer>Developed by Muhammad Tahir Qadri</footer>
         </div>
@@ -96,9 +66,7 @@
     <script src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            navigator.serviceWorker.register('/sw.js');
         }
     </script>
 </body>
