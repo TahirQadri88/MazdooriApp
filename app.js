@@ -1,12 +1,6 @@
+// app.js - Updated with Login Tap Debug (Tahir - Final Fix)
 alert("✅ 1. app.js LOADED successfully");
-alert("🔥 2. Starting Firebase now...");
-try {
-    const app = firebase.initializeApp(firebaseConfig);
-    alert("✅ 3. Firebase INITIALIZED OK!");
-} catch (e) {
-    alert("❌ FIREBASE ERROR: " + e.message);
-}
-// app.js
+
 const firebaseConfig = {
   apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
   authDomain: "mazdooriapp.firebaseapp.com",
@@ -16,18 +10,23 @@ const firebaseConfig = {
   appId: "1:407506330676:web:00fdf738e749ecea3c1661"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+try {
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    alert("✅ 3. Firebase INITIALIZED OK!");
+} catch (e) {
+    alert("❌ FIREBASE ERROR: " + e.message);
+    console.error(e);
+}
 
-const appId = 'khyber-traders'; // Assuming an appId, adjust as needed
+// ======================== YOUR ORIGINAL CODE (CLEAN) ========================
+const appId = 'khyber-traders';
 
-// Paths as per spec
 const recordsPath = `/artifacts/${appId}/public/data/records`;
 const usersPath = `/artifacts/${appId}/public/data/users`;
 const configPath = `/artifacts/${appId}/public/data/config/main`;
 
-// Default fields if config empty
 const defaultFields = {
     Labour: [
         { name: '1st floor carton', rate: 18 },
@@ -42,45 +41,38 @@ const defaultFields = {
         { name: 'BABA', rate: 30 },
         { name: 'TPT OTHERS', rate: 30 }
     ]
-    // Supply not specified, add if needed
 };
 
-// Master admin fallback
 const masterAdmin = { username: 'admin', password: '123' };
-
-// Local storage keys
 const LOGIN_STATE = 'loginState';
 
-// Current user
 let currentUser = null;
 let isAdmin = false;
 let fields = { Labour: [], Transport: [], Supply: [] };
 
-// Helper: Guard Firestore calls
 function guardFirestore(fn) {
     if (!auth.currentUser) return;
     fn();
 }
 
-// Init auth
 auth.signInAnonymously().catch(console.error);
 
-// Load config
 async function loadConfig() {
     const configDoc = await db.doc(configPath).get();
     if (configDoc.exists && configDoc.data().fields) {
         fields = configDoc.data().fields;
     } else {
-        // Pre-load defaults
         fields = defaultFields;
         await db.doc(configPath).set({ fields });
     }
 }
 
-// Login
+// ==================== LOGIN BUTTON WITH TAP ALERT ====================
 document.getElementById('login-btn').addEventListener('click', async () => {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    alert("🔘 4. Login button was TAPPED!");   // ← This is the new alert we are testing
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
 
     // Check master admin first
     if (username === masterAdmin.username && password === masterAdmin.password) {
@@ -120,7 +112,7 @@ function postLogin() {
 const savedState = localStorage.getItem(LOGIN_STATE);
 if (savedState) {
     currentUser = JSON.parse(savedState);
-    isAdmin = currentUser.username === 'admin'; // Simplify, adjust if more admins
+    isAdmin = currentUser.username === 'admin';
     postLogin();
 }
 
@@ -170,7 +162,6 @@ workDateInput.addEventListener('change', async () => {
     const date = workDateInput.value;
     if (!date) return;
 
-    // Search for existing record
     guardFirestore(async () => {
         const records = await db.collection(recordsPath).get();
         const existing = records.docs.find(doc => doc.data().uid === currentUser.uid && doc.data().date === date);
@@ -206,7 +197,6 @@ document.getElementById('save-work-btn').addEventListener('click', async () => {
         const name = input.dataset.name;
         quantities[name] = qty;
 
-        // Find rate
         const type = Object.keys(fields).find(t => fields[t].some(f => f.name === name));
         const rate = fields[type].find(f => f.name === name).rate;
         total += qty * rate;
@@ -232,9 +222,8 @@ document.getElementById('save-work-btn').addEventListener('click', async () => {
     });
 });
 
-// Admin Panel: Load data
+// Admin Panel functions (same as before)
 async function loadAdminData() {
-    // Users
     const usersList = document.getElementById('users-list');
     usersList.innerHTML = '';
     guardFirestore(async () => {
@@ -251,7 +240,6 @@ async function loadAdminData() {
         });
     });
 
-    // Items
     const itemsList = document.getElementById('items-list');
     itemsList.innerHTML = '';
     Object.keys(fields).forEach(type => {
@@ -267,7 +255,6 @@ async function loadAdminData() {
     });
 }
 
-// Add User
 document.getElementById('add-user-btn').addEventListener('click', async () => {
     const username = document.getElementById('new-username').value;
     const password = document.getElementById('new-password').value;
@@ -298,7 +285,6 @@ window.deleteUser = async (id) => {
     }
 };
 
-// Add Item
 document.getElementById('add-item-btn').addEventListener('click', async () => {
     const name = document.getElementById('new-item-name').value;
     const type = document.getElementById('new-item-type').value;
@@ -330,7 +316,6 @@ window.deleteItem = async (type, name) => {
     }
 };
 
-// Ledger
 async function loadLedger() {
     const fromDate = document.getElementById('from-date').value;
     const toDate = document.getElementById('to-date').value;
@@ -340,11 +325,9 @@ async function loadLedger() {
         let records = await db.collection(recordsPath).get();
         records = records.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Client-side filter
         if (fromDate) records = records.filter(r => r.date >= fromDate);
         if (toDate) records = records.filter(r => r.date <= toDate);
 
-        // Sort by date desc
         records.sort((a, b) => b.date.localeCompare(a.date));
 
         const content = document.getElementById('ledger-content');
@@ -352,7 +335,7 @@ async function loadLedger() {
 
         if (mode === 'log') {
             records.forEach(rec => {
-                if (rec.uid !== currentUser.uid && !isAdmin) return; // Owner or admin
+                if (rec.uid !== currentUser.uid && !isAdmin) return;
                 const div = document.createElement('div');
                 div.innerHTML = `
                     <p>Date: ${rec.date} | Staff: ${rec.username} | Total: Rs ${rec.total}</p>
@@ -364,11 +347,10 @@ async function loadLedger() {
                 content.appendChild(div);
             });
         } else if (mode === 'summary' && isAdmin) {
-            // Consolidated table
             const summary = {};
             records.forEach(rec => {
-                Object.keys(rec.quantities).forEach(item => {
-                    summary[item] = (summary[item] || 0) + rec.quantities[item];
+                Object.keys(rec.quantities || {}).forEach(item => {
+                    summary[item] = (summary[item] || 0) + (rec.quantities[item] || 0);
                 });
             });
             let table = '<table><tr><th>Item</th><th>Total Qty</th></tr>';
@@ -383,21 +365,16 @@ async function loadLedger() {
 
 document.getElementById('filter-ledger-btn').addEventListener('click', loadLedger);
 
-window.editRecord = (id) => {
-    // Redirect to add-work with date and load
-    // For simplicity, alert 'Edit via Add Work screen'
-    alert('Select the date in Add Work to edit');
-};
+window.editRecord = (id) => alert('Select the date in Add Work to edit');
 
 window.shareWhatsApp = async (id) => {
     const rec = (await db.collection(recordsPath).doc(id).get()).data();
     let text = `📅 Date: ${rec.date} | 👤 Staff: ${rec.username}\n`;
-    Object.keys(rec.quantities).forEach(item => {
+    Object.keys(rec.quantities || {}).forEach(item => {
         if (rec.quantities[item] > 0) text += `${item}: ${rec.quantities[item]}\n`;
     });
     text += `Total: Rs ${rec.total}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url);
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
 };
 
 window.exportImage = async (id) => {
@@ -407,15 +384,14 @@ window.exportImage = async (id) => {
         <h1>KHYBER TRADERS</h1>
         <p>Wholesale Vet Pharmacy, Karachi - 0335-2999006 - https://animalhealth.pk</p>
         <p>Date: ${rec.date} | Staff: ${rec.username}</p>
-        ${Object.keys(rec.quantities).map(item => rec.quantities[item] > 0 ? `<p>${item}: ${rec.quantities[item]}</p>` : '').join('')}
+        ${Object.keys(rec.quantities || {}).map(item => rec.quantities[item] > 0 ? `<p>${item}: ${rec.quantities[item]}</p>` : '').join('')}
         <p>Total: Rs ${rec.total}</p>
     `;
     studio.style.width = '1080px';
-    studio.style.height = '1350px'; // 4:5 ratio
+    studio.style.height = '1350px';
     const canvas = await html2canvas(studio);
-    const img = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.href = img;
+    link.href = canvas.toDataURL('image/png');
     link.download = `report_${rec.date}.png`;
     link.click();
     studio.innerHTML = '';
@@ -429,7 +405,7 @@ window.printThermal = async (id) => {
         Wholesale Vet Pharmacy, Karachi - 0335-2999006 - https://animalhealth.pk
         Date: ${rec.date}
         Staff: ${rec.username}
-        ${Object.keys(rec.quantities).map(item => rec.quantities[item] > 0 ? `${item}: ${rec.quantities[item]}\n` : '').join('')}
+        ${Object.keys(rec.quantities || {}).map(item => rec.quantities[item] > 0 ? `${item}: ${rec.quantities[item]}\n` : '').join('')}
         Total: Rs ${rec.total}
     `;
     window.print();
