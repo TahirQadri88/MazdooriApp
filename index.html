@@ -1,666 +1,666 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KHYBER TRADERS - Mazdoori Calculator</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Export Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f8fafc; 
-            color: #0f172a;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .app-container {
-            max-width: 480px;
-            margin: 0 auto;
-            background: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.1);
-        }
-        .branding-gradient {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
-        }
-        .card {
-            background: #ffffff;
-            border-radius: 1.25rem;
-            border: 1px solid #e2e8f0;
-            padding: 1.25rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        input, select {
-            border: 1.5px solid #e2e8f0;
-            border-radius: 0.75rem;
-            padding: 0.8rem;
-            width: 100%;
-            outline: none;
-            font-weight: 600;
-        }
-        input:focus { border-color: #2563eb; ring: 2px; ring-color: #dbeafe; }
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: white;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1e40af;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(3600deg); } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
+```
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+    body { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        background-color: #f8fafc; 
+        color: #0f172a;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .app-shell {
+        max-width: 480px;
+        margin: 0 auto;
+        background: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 50px rgba(0,0,0,0.1);
+    }
+    .branding-header {
+        background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    }
+    .card {
+        background: #ffffff;
+        border-radius: 1.25rem;
+        border: 1px solid #e2e8f0;
+        padding: 1.25rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    input, select {
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.8rem;
+        width: 100%;
+        outline: none;
+        font-weight: 600;
+    }
+    input:focus { border-color: #2563eb; }
+    
+    .loading-screen {
+        position: fixed;
+        inset: 0;
+        background: #ffffff;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .spinner {
+        width: 32px;
+        height: 32px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1e40af;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+```
+
 </head>
 <body>
 
-    <!-- Connection Guard Overlay -->
-    <div id="boot-loader" class="loading-overlay">
-        <div class="spinner"></div>
-        <p class="mt-4 font-bold text-blue-900 animate-pulse">CONNECTING TO KHYBER TRADERS CLOUD...</p>
-        <p id="boot-error" class="mt-2 text-[10px] text-red-500 hidden px-10 text-center">Connection taking longer than usual. Check internet or Firebase Whitelist settings.</p>
+```
+<!-- Boot Overlay -->
+<div id="boot-overlay" class="loading-screen">
+    <div class="spinner"></div>
+    <p class="mt-4 font-black text-blue-900 tracking-tighter text-xl">KHYBER TRADERS</p>
+    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-1">Establishing Cloud Sync...</p>
+    <p id="boot-status" class="text-[9px] text-slate-300 mt-2 font-medium"></p>
+    <button id="bypass-btn" onclick="unlock()" class="hidden mt-8 text-[10px] font-black text-blue-600 underline uppercase tracking-widest">Force Unlock</button>
+</div>
+
+<div class="app-shell">
+    
+    <!-- Header -->
+    <header class="branding-header text-white px-6 py-6 sticky top-0 z-50 shadow-xl">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter leading-none">KHYBER TRADERS</h1>
+                <p class="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-2">Wholesale Vet Pharmacy</p>
+            </div>
+            <div id="nav-actions" class="hidden flex gap-2">
+                <button onclick="nav('dashboard')" class="p-2 bg-white/10 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                </button>
+                <button onclick="logout()" class="p-2 bg-red-500/20 rounded-xl text-red-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-blue-100">
+            <span>Karachi | 0335-2999006</span>
+            <a href="https://animalhealth.pk" target="_blank" class="hover:underline">animalhealth.pk</a>
+        </div>
+    </header>
+
+    <!-- Screen: Login -->
+    <div id="login" class="p-8 flex-1 flex flex-col justify-center">
+        <div class="text-center mb-10">
+            <div class="w-16 h-16 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-black shadow-inner">KT</div>
+            <h2 class="text-2xl font-extrabold text-slate-800">Mazdoori Portal</h2>
+            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Sign in to begin</p>
+        </div>
+        <div class="space-y-4">
+            <input type="text" id="loginUser" placeholder="Username" class="bg-slate-50 border-transparent focus:bg-white">
+            <input type="password" id="loginPass" placeholder="Password" class="bg-slate-50 border-transparent focus:bg-white">
+            <button onclick="doLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-blue-500/30 active:scale-95 transition-all">
+                Sign In to Cloud
+            </button>
+        </div>
     </div>
 
-    <div class="app-container">
-        
-        <!-- Premium Header -->
-        <header class="branding-gradient text-white px-6 py-6 sticky top-0 z-50 shadow-xl">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-2xl font-black tracking-tighter leading-none">KHYBER TRADERS</h1>
-                    <p class="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-1.5">Wholesale Vet Pharmacy</p>
+    <!-- Screen: Dashboard -->
+    <div id="dashboard" class="hidden p-6 space-y-4 flex-1 overflow-y-auto no-scrollbar">
+        <div class="bg-slate-50 border border-slate-200 rounded-3xl p-8 mb-4 relative overflow-hidden">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">Account Status: Active</p>
+            <h3 class="text-3xl font-black text-slate-900 uppercase tracking-tighter relative z-10" id="userNameDisp">User</h3>
+            <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-100 rounded-full opacity-20"></div>
+        </div>
+        <div class="grid gap-4">
+            <button onclick="nav('entry')" class="card w-full flex items-center justify-between group active:bg-blue-50 transition-all border-l-4 border-l-blue-600">
+                <div class="flex items-center gap-4">
+                    <span class="text-2xl">⚡</span>
+                    <div class="text-left">
+                        <p class="font-black text-slate-800">New Daily Entry</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Calculations</p>
+                    </div>
                 </div>
-                <div id="navActions" class="hidden flex gap-2 mt-1">
-                    <button onclick="nav('dashboard')" class="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></button>
-                    <button onclick="logout()" class="p-2 bg-red-500/20 rounded-xl text-red-100"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+                <span class="text-slate-300 group-hover:text-blue-600 transition">→</span>
+            </button>
+            <button onclick="nav('history')" class="card w-full flex items-center justify-between group active:bg-green-50 transition-all border-l-4 border-l-green-600">
+                <div class="flex items-center gap-4">
+                    <span class="text-2xl">📊</span>
+                    <div class="text-left">
+                        <p class="font-black text-slate-800">History & Ledgers</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Reports</p>
+                    </div>
                 </div>
-            </div>
-            <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-blue-100">
-                <span>Karachi | 0335-2999006</span>
-                <a href="https://animalhealth.pk" target="_blank" class="underline">animalhealth.pk</a>
-            </div>
-        </header>
+                <span class="text-slate-300 group-hover:text-green-600 transition">→</span>
+            </button>
+            <button id="admin-panel-btn" onclick="nav('admin')" class="hidden card w-full flex items-center justify-between group active:bg-slate-100 transition-all border-l-4 border-l-slate-800">
+                <div class="flex items-center gap-4">
+                    <span class="text-2xl">⚙️</span>
+                    <div class="text-left">
+                        <p class="font-black text-slate-800">Admin Panel</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">System Settings</p>
+                    </div>
+                </div>
+                <span class="text-slate-300 group-hover:text-slate-900 transition">→</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- Screen: Login -->
-        <div id="login" class="p-8 flex-1 flex flex-col justify-center animate-in fade-in duration-500">
-            <div class="text-center mb-10">
-                <div class="w-20 h-20 bg-blue-50 text-blue-700 rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-inner">KT</div>
-                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Cloud Calculator</h2>
-                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Staff Access Only</p>
-            </div>
-
-            <div class="space-y-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
-                    <input type="text" id="loginUser" placeholder="Enter username">
+    <!-- Screen: Daily Entry -->
+    <div id="entry" class="hidden p-5 space-y-6 flex-1 bg-slate-50 overflow-y-auto no-scrollbar pb-40">
+        <div class="card bg-white">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Work Date</label>
+            <input type="date" id="entryDate" class="font-black text-blue-700 bg-slate-50 border-none text-lg">
+        </div>
+        <section class="space-y-4">
+            <h3 class="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1 border-b pb-1">Labour Charges</h3>
+            <div id="lab-list" class="grid grid-cols-2 gap-3"></div>
+        </section>
+        <section class="space-y-4">
+            <h3 class="text-[10px] font-black text-orange-600 uppercase tracking-widest ml-1 border-b pb-1">Transport Charges</h3>
+            <div id="tpt-list" class="grid grid-cols-2 gap-3"></div>
+        </section>
+        <section class="space-y-4">
+            <h3 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1 border-b pb-1">Domestic Supply (Suzuki/Rickshaw)</h3>
+            <div id="sup-list" class="space-y-3"></div>
+        </section>
+        <!-- Sticky Footer -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto p-6 bg-slate-900 text-white rounded-t-[2.5rem] shadow-2xl z-40">
+            <div class="flex justify-between items-end">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Grand Total Amount</span>
+                    <span class="text-4xl font-black tracking-tighter">Rs <span id="v-grand-total">0</span></span>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
-                    <input type="password" id="loginPass" placeholder="••••••••">
-                </div>
-                <button onclick="doLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-blue-500/30 active:scale-95 transition-all mt-4">
-                    Sign In
-                </button>
+                <button id="save-btn" onclick="saveEntry()" class="bg-blue-600 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl shadow-blue-500/20">Save to Cloud</button>
             </div>
         </div>
+    </div>
 
-        <!-- Screen: Dashboard -->
-        <div id="dashboard" class="hidden p-6 space-y-4 flex-1 overflow-y-auto no-scrollbar">
-            <div class="bg-slate-50 border border-slate-200 rounded-3xl p-8 mb-6 relative overflow-hidden">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">Welcome,</p>
-                <h3 class="text-4xl font-black text-slate-900 uppercase tracking-tight relative z-10" id="dispName">User</h3>
-                <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-100 rounded-full opacity-20"></div>
+    <!-- Screen: History -->
+    <div id="history" class="hidden p-5 space-y-6 flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div class="card space-y-4">
+            <div class="grid grid-cols-2 gap-2">
+                <input type="date" id="h-start" class="text-xs p-2">
+                <input type="date" id="h-end" class="text-xs p-2">
             </div>
-
-            <div class="grid gap-4">
-                <button onclick="nav('entry')" class="card w-full flex items-center justify-between group active:bg-blue-50 transition-all border-l-4 border-l-blue-600">
-                    <div class="flex items-center gap-5">
-                        <span class="text-3xl">✍️</span>
-                        <div class="text-left">
-                            <p class="font-black text-slate-800 text-lg">Daily Entry</p>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Calculations</p>
-                        </div>
-                    </div>
-                    <span class="text-slate-300 group-hover:text-blue-600 text-2xl font-black">→</span>
-                </button>
-
-                <button onclick="nav('history')" class="card w-full flex items-center justify-between group active:bg-green-50 transition-all border-l-4 border-l-green-600">
-                    <div class="flex items-center gap-5">
-                        <span class="text-3xl">📋</span>
-                        <div class="text-left">
-                            <p class="font-black text-slate-800 text-lg">Ledger & Reports</p>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">History</p>
-                        </div>
-                    </div>
-                    <span class="text-slate-300 group-hover:text-green-600 text-2xl font-black">→</span>
-                </button>
-
-                <button id="adminBtn" onclick="nav('admin')" class="hidden card w-full flex items-center justify-between group active:bg-slate-100 transition-all border-l-4 border-l-slate-800">
-                    <div class="flex items-center gap-5">
-                        <span class="text-3xl">⚙️</span>
-                        <div class="text-left">
-                            <p class="font-black text-slate-800 text-lg">Admin Panel</p>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Manage App</p>
-                        </div>
-                    </div>
-                    <span class="text-slate-300 group-hover:text-slate-900 text-2xl font-black">→</span>
-                </button>
+            <div class="flex gap-2">
+                <button onclick="applyFilter()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase">Apply Filter</button>
+                <button onclick="clearFilter()" class="flex-1 bg-slate-100 text-slate-500 py-2.5 rounded-xl text-[10px] font-black uppercase">Reset</button>
             </div>
         </div>
-
-        <!-- Screen: Daily Entry -->
-        <div id="entry" class="hidden p-5 space-y-6 flex-1 bg-slate-50 overflow-y-auto no-scrollbar pb-40">
-            <div class="card bg-white">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Record Date</label>
-                <input type="date" id="entryDate" class="font-black text-blue-700 bg-slate-50 border-none text-lg">
+        <div class="flex gap-2 no-scrollbar overflow-x-auto pb-2">
+            <button onclick="shareWA()" class="shrink-0 bg-green-500 text-white p-4 rounded-xl shadow flex flex-col items-center"><span class="text-lg block">💬</span><span class="text-[8px] font-black uppercase">WhatsApp</span></button>
+            <button onclick="exportIMG()" class="shrink-0 bg-indigo-600 text-white p-4 rounded-xl shadow flex flex-col items-center"><span class="text-lg block">🖼️</span><span class="text-[8px] font-black uppercase">Image</span></button>
+            <button onclick="exportPDF()" class="shrink-0 bg-red-600 text-white p-4 rounded-xl shadow flex flex-col items-center"><span class="text-lg block">📄</span><span class="text-[8px] font-black uppercase">PDF</span></button>
+            <button onclick="exportCSV()" class="shrink-0 bg-yellow-600 text-white p-4 rounded-xl shadow flex flex-col items-center"><span class="text-lg block">📊</span><span class="text-[8px] font-black uppercase">CSV</span></button>
+        </div>
+        <div id="printArea" class="bg-white p-6 rounded-2xl border shadow-sm">
+            <div class="text-center mb-8 border-b-2 border-slate-900 pb-6">
+                <h2 class="text-3xl font-black text-blue-900 uppercase tracking-tighter leading-none">KHYBER TRADERS</h2>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Wholesale Vet Pharmacy • Karachi</p>
+                <p class="text-[9px] text-slate-400 mt-1 font-bold">0335-2999006 • animalhealth.pk</p>
+                <div class="mt-4 inline-block bg-blue-50 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest text-blue-700" id="h-label">Ledger Report</div>
             </div>
-
-            <section class="space-y-4">
-                <h3 class="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1 border-b pb-2">Labour Items</h3>
-                <div id="labourFields" class="grid grid-cols-2 gap-3"></div>
-            </section>
-
-            <section class="space-y-4">
-                <h3 class="text-[10px] font-black text-orange-600 uppercase tracking-widest ml-1 border-b pb-2">Transport Items</h3>
-                <div id="transportFields" class="grid grid-cols-2 gap-3"></div>
-            </section>
-
-            <section class="space-y-4">
-                <h3 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1 border-b pb-2">Domestic Supply (Suzuki/Rickshaw)</h3>
-                <div id="supplyFields" class="space-y-3"></div>
-            </section>
-
-            <!-- Floating Footer -->
-            <div class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto p-6 bg-slate-900 text-white rounded-t-[2.5rem] shadow-2xl z-40">
-                <div class="flex justify-between items-end">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Grand Total</span>
-                        <span class="text-4xl font-black tracking-tighter">Rs <span id="vTotal">0</span></span>
-                    </div>
-                    <button id="saveBtn" onclick="saveEntry()" class="bg-blue-600 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl shadow-blue-500/20">Sync To Cloud</button>
-                </div>
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-[10px] whitespace-nowrap">
+                    <thead>
+                        <tr class="text-left text-slate-400 font-black uppercase border-b border-slate-100">
+                            <th class="p-2">Date</th>
+                            <th class="p-2">User</th>
+                            <th class="p-2 text-right">Lab</th>
+                            <th class="p-2 text-right">Tpt</th>
+                            <th class="p-2 text-right">Sup</th>
+                            <th class="p-2 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTable" class="divide-y divide-slate-50 text-slate-700"></tbody>
+                    <tfoot class="bg-slate-900 text-white font-black text-[9px]">
+                        <tr>
+                            <td class="p-4 rounded-l-2xl uppercase" colspan="2">Final Summary</td>
+                            <td class="p-4 text-right text-blue-400" id="s-lab">0</td>
+                            <td class="p-4 text-right text-orange-400" id="s-tpt">0</td>
+                            <td class="p-4 text-right text-indigo-400" id="s-sup">0</td>
+                            <td class="p-4 text-right text-green-400 rounded-r-2xl text-base" id="s-total">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
+    </div>
 
-        <!-- Screen: History & Reports -->
-        <div id="history" class="hidden p-5 space-y-6 flex-1 overflow-y-auto no-scrollbar">
-            <div class="card space-y-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="space-y-1">
-                        <label class="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">From</label>
-                        <input type="date" id="hStart" class="text-xs p-2">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">To</label>
-                        <input type="date" id="hEnd" class="text-xs p-2">
-                    </div>
-                </div>
+    <!-- Screen: Admin -->
+    <div id="admin" class="hidden p-6 space-y-6 flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div class="card space-y-5">
+            <h3 class="text-xl font-black tracking-tight border-b pb-2">Calculator Config</h3>
+            <div class="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
+                <input type="text" id="add-f-name" placeholder="Item/Area Name" class="bg-white">
                 <div class="flex gap-2">
-                    <button onclick="applyFilter()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase">Apply</button>
-                    <button onclick="clearFilter()" class="flex-1 bg-slate-100 text-slate-500 py-2.5 rounded-xl text-[10px] font-black uppercase">Reset</button>
+                    <select id="add-f-type" class="bg-white text-xs font-black uppercase">
+                        <option value="labour">Labour Item</option>
+                        <option value="transport">Transport Item</option>
+                        <option value="supply">Suzuki Area</option>
+                    </select>
+                    <input type="number" id="add-f-rate" placeholder="Rate" class="bg-white w-24">
                 </div>
+                <button onclick="addField()" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest">Create Field</button>
             </div>
-
-            <div class="flex gap-2 no-scrollbar overflow-x-auto pb-2">
-                <button onclick="shareWA()" class="shrink-0 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1"><span class="text-xl">💬</span><span class="text-[8px] font-black uppercase">WhatsApp</span></button>
-                <button onclick="exportIMG()" class="shrink-0 bg-indigo-600 text-white px-6 py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1"><span class="text-xl">🖼️</span><span class="text-[8px] font-black uppercase">Image</span></button>
-                <button onclick="exportPDF()" class="shrink-0 bg-red-600 text-white px-6 py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1"><span class="text-xl">📄</span><span class="text-[8px] font-black uppercase">PDF</span></button>
-                <button onclick="exportCSV()" class="shrink-0 bg-yellow-600 text-white px-6 py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1"><span class="text-xl">📊</span><span class="text-[8px] font-black uppercase">CSV</span></button>
-            </div>
-
-            <!-- Report Card for Export -->
-            <div id="printArea" class="bg-white p-6 rounded-3xl border shadow-sm">
-                <div class="text-center mb-8 border-b-2 border-slate-900 pb-6">
-                    <h2 class="text-3xl font-black text-blue-900 uppercase tracking-tighter leading-none">KHYBER TRADERS</h2>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">Wholesale Vet Pharmacy • Karachi</p>
-                    <p class="text-[9px] text-slate-400 mt-1 font-bold">0335-2999006 • animalhealth.pk</p>
-                    <div class="mt-5 inline-block bg-blue-50 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest text-blue-700" id="rangeLabel">Full Ledger Report</div>
-                </div>
-
-                <div class="overflow-x-auto no-scrollbar">
-                    <table class="w-full text-[10px] whitespace-nowrap">
-                        <thead>
-                            <tr class="text-left text-slate-400 font-black uppercase border-b border-slate-100">
-                                <th class="p-2">Date</th>
-                                <th class="p-2">User</th>
-                                <th class="p-2 text-right">Lab</th>
-                                <th class="p-2 text-right">Tpt</th>
-                                <th class="p-2 text-right">Sup</th>
-                                <th class="p-2 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportTable" class="divide-y divide-slate-50 text-slate-700"></tbody>
-                        <tfoot class="bg-slate-900 text-white font-black text-[9px]">
-                            <tr>
-                                <td class="p-4 rounded-l-2xl uppercase" colspan="2">Report Summary</td>
-                                <td class="p-4 text-right text-blue-400" id="sLab">0</td>
-                                <td class="p-4 text-right text-orange-400" id="sTpt">0</td>
-                                <td class="p-4 text-right text-indigo-400" id="sSup">0</td>
-                                <td class="p-4 text-right text-green-400 rounded-r-2xl text-base" id="sTotal">0</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
+            <div id="field-manager" class="space-y-3"></div>
         </div>
-
-        <!-- Screen: Admin -->
-        <div id="admin" class="hidden p-6 space-y-6 flex-1 overflow-y-auto no-scrollbar pb-10">
-            <div class="card space-y-5">
-                <h3 class="text-xl font-black tracking-tight border-b pb-2">Master Manager</h3>
-                
-                <div class="bg-blue-50 p-5 rounded-2xl space-y-4 border border-blue-100">
-                    <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Create New Calculator Field</p>
-                    <input type="text" id="addName" placeholder="Item Name (e.g. SITE Rickshaw)" class="bg-white">
-                    <div class="flex gap-2">
-                        <select id="addType" class="bg-white text-xs font-bold uppercase py-3">
-                            <option value="labour">Labour Item</option>
-                            <option value="transport">Transport Item</option>
-                            <option value="supply">Suzuki/Rickshaw Area</option>
-                        </select>
-                        <input type="number" id="addRate" placeholder="Rate" class="bg-white w-28">
-                    </div>
-                    <button onclick="addField()" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest shadow-lg">Create Field</button>
-                </div>
-
-                <div id="fieldList" class="space-y-3 pt-2"></div>
+        <div class="card space-y-4">
+            <h3 class="text-xl font-black tracking-tight border-b pb-2">Manage Staff</h3>
+            <div class="space-y-2">
+                <input type="text" id="reg-u" placeholder="New Username" class="bg-slate-50">
+                <input type="password" id="reg-p" placeholder="New Password" class="bg-slate-50">
+                <button onclick="createUser()" class="w-full bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest">Register Staff</button>
             </div>
-
-            <div class="card space-y-4">
-                <h3 class="text-xl font-black tracking-tight border-b pb-2">Staff Access</h3>
-                <div class="space-y-2">
-                    <input type="text" id="regUser" placeholder="New Username" class="bg-slate-50">
-                    <input type="password" id="regPass" placeholder="New Password" class="bg-slate-50">
-                    <button onclick="createUser()" class="w-full bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest">Register Staff</button>
-                </div>
-                <div id="userList" class="text-[10px] space-y-2 font-bold text-slate-500 bg-slate-50 p-4 rounded-2xl"></div>
-            </div>
-
-            <div class="bg-red-50 p-6 rounded-2xl border-2 border-red-100 text-center">
-                <button onclick="nuke()" class="w-full bg-red-600 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest shadow-lg">Nuke Cloud Records</button>
-            </div>
+            <div id="u-list" class="text-[10px] space-y-2 font-bold text-slate-500 bg-slate-50 p-4 rounded-xl"></div>
         </div>
-
+        <button onclick="nukeHistory()" class="w-full bg-red-600 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest shadow-lg">Erase All Cloud History</button>
     </div>
 
-    <!-- Logic -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
+</div>
 
-        // ==========================================
-        // FIREBASE SETUP
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
-            authDomain: "mazdooriapp.firebaseapp.com",
-            projectId: "mazdooriapp",
-            storageBucket: "mazdooriapp.firebasestorage.app",
-            messagingSenderId: "407506330676",
-            appId: "1:407506330676:web:00fdf738e749ecea3c1661",
-            measurementId: "G-NMJXVHCPPJ"
-        };
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const APP_ID = "mazdoori-calculator-kt";
+    const firebaseConfig = {
+        apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
+        authDomain: "mazdooriapp.firebaseapp.com",
+        projectId: "mazdooriapp",
+        storageBucket: "mazdooriapp.firebasestorage.app",
+        messagingSenderId: "407506330676",
+        appId: "1:407506330676:web:00fdf738e749ecea3c1661"
+    };
 
-        // Paths using Mandatory Rule 1
-        const usersRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
-        const recordsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'records');
-        const configRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'config');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        let users = [];
-        let records = [];
-        let fields = [];
-        let filtered = [];
-        let user = JSON.parse(localStorage.getItem('kt_user_session')) || null;
+    // ✅ FIXED: Simple flat top-level paths (no deep nesting)
+    const usersRef = collection(db, 'kt_users');
+    const recordsRef = collection(db, 'kt_records');
+    const configRef = doc(db, 'kt_config', 'main');
 
-        const defaultFields = [
-            { id: 'L1', name: '1st floor carton', type: 'labour', rate: 18 },
-            { id: 'L2', name: '1st floor bags', type: 'labour', rate: 18 },
-            { id: 'L3', name: 'Makkah Market', type: 'labour', rate: 18 },
-            { id: 'L4', name: '2nd floor', type: 'labour', rate: 18 },
-            { id: 'L5', name: '3rd floor', type: 'labour', rate: 18 },
-            { id: 'L6', name: 'Ahmed Chamber', type: 'labour', rate: 18 },
-            { id: 'T1', name: 'TPT Out', type: 'transport', rate: 30 },
-            { id: 'T2', name: 'BABA', type: 'transport', rate: 30 },
-            { id: 'T3', name: 'TPT OTHERS', type: 'transport', rate: 30 }
-        ];
+    let gUsers = [];
+    let gRecords = [];
+    let gFields = [];
+    let gFiltered = [];
+    let gUser = JSON.parse(localStorage.getItem('kt_user_v1')) || null;
 
-        // ==========================================
-        // BOOT ENGINE
-        // ==========================================
-        async function startApp() {
-            const errorTimer = setTimeout(() => {
-                document.getElementById('boot-error').classList.remove('hidden');
-            }, 5000);
+    function setStatus(msg) {
+        const el = document.getElementById('boot-status');
+        if(el) el.innerText = msg;
+    }
 
-            try {
-                // RULE 3 - AUTH FIRST
-                await signInAnonymously(auth);
-                
-                // Set up snapshot listeners with error handling
-                onSnapshot(usersRef, (s) => {
-                    users = s.docs.map(d => ({ docId: d.id, ...d.data() }));
-                    if(users.length === 0) addDoc(usersRef, { username: 'admin', password: '123', role: 'admin' });
-                    updateAdminUI();
-                }, (err) => console.error("Firestore Users Error:", err));
+    async function boot() {
+        setTimeout(() => { document.getElementById('bypass-btn').classList.remove('hidden'); }, 8000);
 
-                onSnapshot(recordsRef, (s) => {
-                    records = s.docs.map(d => ({ docId: d.id, ...d.data() }));
-                    applyFilter();
-                }, (err) => console.error("Firestore Records Error:", err));
+        try {
+            setStatus('Authenticating...');
+            await signInAnonymously(auth);
+            setStatus('Connected. Loading data...');
 
-                onSnapshot(configRef, (s) => {
-                    if(s.exists() && s.data().items) {
-                        fields = s.data().items;
-                    } else {
-                        fields = defaultFields;
-                        setDoc(configRef, { items: fields });
-                    }
-                    renderEntryUI();
-                    updateAdminUI();
-                }, (err) => console.error("Firestore Config Error:", err));
+            let usersLoaded = false, recordsLoaded = false, configLoaded = false;
 
-                // Success
-                clearTimeout(errorTimer);
-                document.getElementById('boot-loader').classList.add('hidden');
-                if(user) nav('dashboard');
-
-            } catch(e) { 
-                console.error("Boot Error:", e);
-                document.getElementById('boot-error').classList.remove('hidden');
+            function tryUnlock() {
+                if(usersLoaded && recordsLoaded && configLoaded) {
+                    setStatus('Ready!');
+                    unlock();
+                }
             }
-        }
 
-        startApp();
+            onSnapshot(usersRef, (s) => {
+                gUsers = s.docs.map(d => ({ docId: d.id, ...d.data() }));
+                if(gUsers.length === 0) {
+                    addDoc(usersRef, { username: 'admin', password: '123', role: 'admin' });
+                }
+                renderAdminPanel();
+                if(!usersLoaded) { usersLoaded = true; tryUnlock(); }
+            }, (err) => {
+                console.error('Users snapshot error:', err);
+                if(!usersLoaded) { usersLoaded = true; tryUnlock(); }
+            });
 
-        // --- NAVIGATION & AUTH ---
-        window.nav = (id) => {
-            if(!user && id !== 'login') id = 'login';
-            ['login','dashboard','entry','history','admin'].forEach(s => document.getElementById(s).classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            document.getElementById('navActions').classList.toggle('hidden', id === 'login');
-            document.getElementById('adminBtn').classList.toggle('hidden', user?.role !== 'admin');
-            if(id === 'dashboard') document.getElementById('dispName').innerText = user.username;
-            if(id === 'entry') document.getElementById('entryDate').valueAsDate = new Date();
-            window.scrollTo(0,0);
-        };
+            onSnapshot(recordsRef, (s) => {
+                gRecords = s.docs.map(d => ({ docId: d.id, ...d.data() }));
+                applyFilter();
+                if(!recordsLoaded) { recordsLoaded = true; tryUnlock(); }
+            }, (err) => {
+                console.error('Records snapshot error:', err);
+                if(!recordsLoaded) { recordsLoaded = true; tryUnlock(); }
+            });
 
-        window.doLogin = () => {
-            const u = document.getElementById('loginUser').value.trim().toLowerCase();
-            const p = document.getElementById('loginPass').value;
-            const match = users.find(x => x.username.toLowerCase() === u && x.password === p);
-            if(match) {
-                user = match;
-                localStorage.setItem('kt_user_session', JSON.stringify(user));
-                nav('dashboard');
-            } else alert("Invalid username or password.");
-        };
-
-        window.logout = () => {
-            if(confirm("Logout from Khyber Traders?")) {
-                user = null;
-                localStorage.removeItem('kt_user_session');
-                nav('login');
-            }
-        };
-
-        // --- CALCULATION LOGIC ---
-        function renderEntryUI() {
-            const L = document.getElementById('labourFields');
-            const T = document.getElementById('transportFields');
-            const S = document.getElementById('supplyFields');
-            L.innerHTML = T.innerHTML = S.innerHTML = '';
-
-            fields.forEach(f => {
-                let html = '';
-                if(f.type === 'supply') {
-                    // Logic: Area Name + Rate (Admin) + Vehicle Count (User)
-                    html = `
-                    <div class="card flex items-center justify-between border-l-4 border-indigo-600">
-                        <div class="flex-1">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1">${f.name}</span>
-                            <span class="text-[11px] font-bold text-slate-600 italic">Freight: Rs ${f.rate}</span>
-                        </div>
-                        <div class="w-24 text-right">
-                            <span class="text-[8px] font-black text-indigo-400 uppercase block mb-1">Vehicles</span>
-                            <input type="number" class="q-box text-center font-black p-3 bg-slate-50 border-none rounded-xl text-blue-700" data-id="${f.id}" data-rate="${f.rate}" data-name="${f.name}" data-type="supply" placeholder="0">
-                        </div>
-                    </div>`;
-                    S.innerHTML += html;
+            onSnapshot(configRef, (s) => {
+                if(s.exists() && s.data().items) {
+                    gFields = s.data().items;
                 } else {
-                    const c = f.type === 'labour' ? 'blue' : 'orange';
-                    html = `
-                    <div class="card space-y-2 border-l-4 border-${c}-600">
-                        <label class="text-[8px] font-black text-slate-400 uppercase block truncate tracking-tight">${f.name} (Rs ${f.rate})</label>
-                        <input type="number" class="q-box font-black text-${c}-700 p-3 bg-slate-50 border-none w-full rounded-xl" data-id="${f.id}" data-rate="${f.rate}" data-name="${f.name}" data-type="${f.type}" placeholder="0">
-                    </div>`;
-                    if(f.type === 'labour') L.innerHTML += html;
-                    else T.innerHTML += html;
+                    gFields = [
+                        { id: 'L1', name: '1st floor carton', type: 'labour', rate: 18 },
+                        { id: 'T1', name: 'TPT Out', type: 'transport', rate: 30 }
+                    ];
+                    setDoc(configRef, { items: gFields });
                 }
+                renderEntryFields();
+                renderAdminPanel();
+                if(!configLoaded) { configLoaded = true; tryUnlock(); }
+            }, (err) => {
+                console.error('Config snapshot error:', err);
+                gFields = [
+                    { id: 'L1', name: '1st floor carton', type: 'labour', rate: 18 },
+                    { id: 'T1', name: 'TPT Out', type: 'transport', rate: 30 }
+                ];
+                renderEntryFields();
+                if(!configLoaded) { configLoaded = true; tryUnlock(); }
             });
 
-            document.querySelectorAll('.q-box').forEach(i => i.addEventListener('input', calc));
-            calc();
+        } catch(e) {
+            console.error('Boot error:', e);
+            document.getElementById('boot-overlay').innerHTML = `
+                <div class="text-center p-8">
+                    <p class="text-red-500 font-black text-lg">Cloud Sync Failed</p>
+                    <p class="text-[11px] text-slate-400 mt-2 font-medium">${e.message}</p>
+                    <p class="text-[10px] text-slate-300 mt-4">Check Firestore Rules & Auth settings in Firebase Console.</p>
+                    <button onclick="location.reload()" class="mt-6 px-6 py-3 bg-blue-600 text-white font-black rounded-xl text-xs uppercase">Retry</button>
+                </div>
+            `;
         }
+    }
 
-        function calc() {
-            let lab=0, tpt=0, sup=0;
-            document.querySelectorAll('.q-box').forEach(i => {
-                const q = parseInt(i.value) || 0;
-                const r = parseInt(i.dataset.rate);
-                if(i.dataset.type === 'labour') lab += (q * r);
-                else if(i.dataset.type === 'transport') tpt += (q * r);
-                else if(i.dataset.type === 'supply') sup += (q * r);
-            });
-            document.getElementById('vTotal').innerText = (lab + tpt + sup).toLocaleString();
+    window.unlock = () => {
+        document.getElementById('boot-overlay').classList.add('hidden');
+        if(gUser) nav('dashboard');
+        else nav('login');
+    };
+
+    boot();
+
+    // --- NAV ---
+    window.nav = (id) => {
+        if(!gUser && id !== 'login') id = 'login';
+        ['login','dashboard','entry','history','admin'].forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById('nav-actions').classList.toggle('hidden', id === 'login');
+        document.getElementById('admin-panel-btn').classList.toggle('hidden', gUser?.role !== 'admin');
+        if(id === 'dashboard') document.getElementById('userNameDisp').innerText = gUser.username;
+        if(id === 'entry') document.getElementById('entryDate').valueAsDate = new Date();
+        window.scrollTo(0,0);
+    };
+
+    window.doLogin = () => {
+        const u = document.getElementById('loginUser').value.trim().toLowerCase();
+        const p = document.getElementById('loginPass').value;
+        const match = gUsers.find(x => x.username.toLowerCase() === u && x.password === p);
+        if(match) {
+            gUser = match;
+            localStorage.setItem('kt_user_v1', JSON.stringify(gUser));
+            nav('dashboard');
+        } else {
+            alert("Invalid username or password.");
         }
+    };
 
-        window.saveEntry = async () => {
-            const date = document.getElementById('entryDate').value;
-            const totStr = document.getElementById('vTotal').innerText.replace(/,/g, '');
-            const tot = parseInt(totStr);
-            if(!date || tot === 0) return alert("Please enter work details.");
+    window.logout = () => {
+        gUser = null;
+        localStorage.removeItem('kt_user_v1');
+        nav('login');
+    };
 
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true; btn.innerText = "WAIT...";
+    // --- ENTRY FIELDS ---
+    function renderEntryFields() {
+        const L = document.getElementById('lab-list');
+        const T = document.getElementById('tpt-list');
+        const S = document.getElementById('sup-list');
+        if(!L || !T || !S) return;
+        L.innerHTML = T.innerHTML = S.innerHTML = '';
 
-            let breakdown = [];
-            let lVal=0, tVal=0, sVal=0;
-
-            document.querySelectorAll('.q-box').forEach(i => {
-                const v = parseInt(i.value) || 0;
-                const r = parseInt(i.dataset.rate);
-                if(v > 0) {
-                    if(i.dataset.type === 'supply') {
-                        breakdown.push(`${i.dataset.name}(${v}x${r})`);
-                        sVal += (v * r);
-                    } else {
-                        breakdown.push(`${i.dataset.name}(${v})`);
-                        if(i.dataset.type === 'labour') lVal += (v * r);
-                        else tVal += (v * r);
-                    }
-                }
-            });
-
-            try {
-                await addDoc(recordsRef, {
-                    ts: Date.now(),
-                    date,
-                    user: user.username,
-                    l_v: lVal,
-                    t_v: tVal,
-                    s_v: sVal,
-                    total: tot,
-                    details: breakdown.join(', ')
-                });
-                alert("Cloud Ledger Updated!");
-                nav('dashboard');
-            } catch(e) { alert("Error updating cloud."); } finally { btn.disabled = false; btn.innerText = "Save Entry"; }
-        };
-
-        // --- LEDGER & REPORTS ---
-        window.applyFilter = () => {
-            const s = document.getElementById('hStart').value;
-            const e = document.getElementById('hEnd').value;
-            filtered = records.filter(r => (!s || r.date >= s) && (!e || r.date <= e)).sort((a,b) => a.ts - b.ts);
-            document.getElementById('rangeLabel').innerText = (s || e) ? `Report: ${s || 'Start'} to ${e || 'End'}` : "Full Ledger Report";
-            renderTable();
-        };
-
-        window.clearFilter = () => {
-            document.getElementById('hStart').value = '';
-            document.getElementById('hEnd').value = '';
-            applyFilter();
-        };
-
-        function renderTable() {
-            const t = document.getElementById('reportTable');
-            t.innerHTML = '';
-            let l=0, tp=0, s=0, tt=0;
-            filtered.forEach(r => {
-                const sv = r.s_v || 0;
-                l += r.l_v; tp += r.t_v; s += sv; tt += r.total;
-                t.innerHTML += `
-                <tr class="border-b border-slate-50">
-                    <td class="p-2 font-medium">${r.date}</td>
-                    <td class="p-2 font-black text-blue-600 uppercase text-[8px] tracking-widest">${r.user}</td>
-                    <td class="p-2 text-right">${r.l_v}</td>
-                    <td class="p-2 text-right">${r.t_v}</td>
-                    <td class="p-2 text-right">${sv}</td>
-                    <td class="p-2 text-right font-black text-slate-900">${r.total}</td>
-                </tr>
-                <tr class="bg-slate-50/50">
-                    <td colspan="6" class="px-2 py-1 italic text-slate-400 font-medium leading-tight text-[8px] truncate">📝 ${r.details}</td>
-                </tr>`;
-            });
-            document.getElementById('sLab').innerText = l;
-            document.getElementById('sTpt').innerText = tp;
-            document.getElementById('sSup').innerText = s;
-            document.getElementById('sTotal').innerText = tt;
-        }
-
-        // --- ADMIN PANEL ---
-        function updateAdminUI() {
-            document.getElementById('userList').innerHTML = users.map(u => `<div class="flex justify-between border-b border-slate-100 py-1 uppercase"><span>${u.username}</span><span class="text-blue-500">${u.role}</span></div>`).join('');
-            document.getElementById('fieldList').innerHTML = fields.map(f => {
-                const color = f.type === 'labour' ? 'blue' : f.type === 'transport' ? 'orange' : 'indigo';
-                return `
-                <div class="bg-white p-4 rounded-2xl border flex flex-col gap-2 shadow-sm">
-                    <div class="flex justify-between items-center">
-                        <input type="text" value="${f.name}" onchange="updateF('${f.id}', 'name', this.value)" class="text-xs font-black uppercase border-none p-0 focus:ring-0 bg-transparent">
-                        <button onclick="delF('${f.id}')" class="text-red-400">🗑️</button>
+        gFields.forEach(f => {
+            let html = '';
+            if(f.type === 'supply') {
+                html = `
+                <div class="card flex items-center justify-between border-l-4 border-indigo-600">
+                    <div class="flex-1">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">${f.name}</span>
+                        <span class="text-[11px] font-bold text-slate-600 italic">Freight: Rs ${f.rate}</span>
                     </div>
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl">
-                        <span class="text-[8px] font-black uppercase text-${color}-600 tracking-widest">${f.type}</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] font-bold text-slate-400">Rs</span>
-                            <input type="number" value="${f.rate}" onchange="updateF('${f.id}', 'rate', this.value)" class="w-16 h-7 text-[10px] font-black text-center rounded border-none bg-white shadow-inner">
-                        </div>
+                    <div class="w-24 text-right">
+                        <span class="text-[8px] font-black text-slate-300 uppercase block mb-1">Vehicles</span>
+                        <input type="number" class="q-box text-center font-black p-3 bg-slate-50 border-none rounded-xl" data-id="${f.id}" data-rate="${f.rate}" data-name="${f.name}" data-type="supply" placeholder="0">
                     </div>
                 </div>`;
-            }).join('');
+                S.innerHTML += html;
+            } else {
+                const c = f.type === 'labour' ? 'blue' : 'orange';
+                html = `
+                <div class="card space-y-2 border-l-4 border-${c}-600">
+                    <label class="text-[8px] font-black text-slate-400 uppercase block truncate tracking-tight">${f.name} (Rs ${f.rate})</label>
+                    <input type="number" class="q-box font-black text-${c}-700 p-3 bg-slate-50 border-none w-full rounded-xl" data-id="${f.id}" data-rate="${f.rate}" data-name="${f.name}" data-type="${f.type}" placeholder="0">
+                </div>`;
+                if(f.type === 'labour') L.innerHTML += html;
+                else T.innerHTML += html;
+            }
+        });
+
+        document.querySelectorAll('.q-box').forEach(i => i.addEventListener('input', runCalc));
+        runCalc();
+    }
+
+    function runCalc() {
+        let total = 0;
+        document.querySelectorAll('.q-box').forEach(i => {
+            const q = parseInt(i.value) || 0;
+            const r = parseInt(i.dataset.rate);
+            total += (q * r);
+        });
+        const el = document.getElementById('v-grand-total');
+        if(el) el.innerText = total.toLocaleString();
+    }
+
+    window.saveEntry = async () => {
+        const date = document.getElementById('entryDate').value;
+        const total = parseInt(document.getElementById('v-grand-total').innerText.replace(/,/g, ''));
+        if(!date || total === 0) return alert("Please enter at least one quantity.");
+
+        const btn = document.getElementById('save-btn');
+        btn.disabled = true; btn.innerText = "SAVING...";
+
+        let breakdown = [];
+        let labV=0, tptV=0, supV=0;
+        document.querySelectorAll('.q-box').forEach(i => {
+            const q = parseInt(i.value) || 0;
+            const r = parseInt(i.dataset.rate);
+            if(q > 0) {
+                if(i.dataset.type === 'supply') {
+                    breakdown.push(`${i.dataset.name}(${q}x${r})`);
+                    supV += (q * r);
+                } else {
+                    breakdown.push(`${i.dataset.name}(${q})`);
+                    if(i.dataset.type === 'labour') labV += (q * r);
+                    else tptV += (q * r);
+                }
+            }
+        });
+
+        try {
+            await addDoc(recordsRef, {
+                ts: Date.now(),
+                date,
+                user: gUser.username,
+                l_v: labV,
+                t_v: tptV,
+                s_v: supV,
+                total,
+                details: breakdown.join(', ')
+            });
+            alert("Saved to Cloud Successfully!");
+            nav('dashboard');
+        } catch(e) {
+            console.error(e);
+            alert("Save failed: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Save to Cloud";
         }
+    };
 
-        window.addField = async () => {
-            const name = document.getElementById('addName').value.trim();
-            const type = document.getElementById('addType').value;
-            const rate = parseInt(document.getElementById('addRate').value);
-            if(!name || isNaN(rate)) return alert("Data missing.");
-            const nItems = [...fields, { id: 'F'+Date.now().toString().slice(-6), name, type, rate }];
-            await setDoc(configRef, { items: nItems });
-            document.getElementById('addName').value = ''; document.getElementById('addRate').value = '';
-        };
+    // --- HISTORY ---
+    window.applyFilter = () => {
+        const s = document.getElementById('h-start')?.value;
+        const e = document.getElementById('h-end')?.value;
+        gFiltered = gRecords.filter(r => (!s || r.date >= s) && (!e || r.date <= e)).sort((a,b) => a.ts - b.ts);
+        const lbl = document.getElementById('h-label');
+        if(lbl) lbl.innerText = (s || e) ? `Ledger: ${s || 'Start'} to ${e || 'End'}` : "Full Ledger Report";
+        renderReportTable();
+    };
 
-        window.updateF = async (id, key, val) => {
-            const nItems = fields.map(i => {
-                if(i.id === id) return { ...i, [key]: key === 'rate' ? parseInt(val) || 0 : val };
-                return i;
-            });
-            await setDoc(configRef, { items: nItems });
-        };
+    window.clearFilter = () => {
+        document.getElementById('h-start').value = '';
+        document.getElementById('h-end').value = '';
+        applyFilter();
+    };
 
-        window.delF = async (id) => {
-            if(!confirm("Delete?")) return;
-            const nItems = fields.filter(i => i.id !== id);
-            await setDoc(configRef, { items: nItems });
-        };
+    function renderReportTable() {
+        const t = document.getElementById('reportTable');
+        if(!t) return;
+        t.innerHTML = '';
+        let l=0, tp=0, s=0, tt=0;
+        gFiltered.forEach(r => {
+            const sv = r.s_v || 0;
+            l += r.l_v; tp += r.t_v; s += sv; tt += r.total;
+            t.innerHTML += `
+            <tr class="border-b border-slate-50">
+                <td class="p-2 font-medium">${r.date}</td>
+                <td class="p-2 font-black text-blue-600 uppercase text-[8px] tracking-widest">${r.user}</td>
+                <td class="p-2 text-right">${r.l_v}</td>
+                <td class="p-2 text-right">${r.t_v}</td>
+                <td class="p-2 text-right">${sv}</td>
+                <td class="p-2 text-right font-black text-slate-900">${r.total}</td>
+            </tr>
+            <tr class="bg-slate-50/50">
+                <td colspan="6" class="px-2 py-1 italic text-slate-400 font-medium text-[8px]">📝 ${r.details}</td>
+            </tr>`;
+        });
+        document.getElementById('s-lab').innerText = l;
+        document.getElementById('s-tpt').innerText = tp;
+        document.getElementById('s-sup').innerText = s;
+        document.getElementById('s-total').innerText = tt;
+    }
 
-        window.createUser = async () => {
-            const username = document.getElementById('regUser').value.trim().toLowerCase();
-            const password = document.getElementById('regPass').value;
-            if(!username || !password) return alert("Fill data.");
-            await addDoc(usersRef, { username, password, role:'user' });
-            document.getElementById('regUser').value = ''; document.getElementById('regPass').value = '';
-        };
+    // --- ADMIN ---
+    function renderAdminPanel() {
+        const ul = document.getElementById('u-list');
+        const fm = document.getElementById('field-manager');
+        if(ul) ul.innerHTML = gUsers.map(u => `<div class="flex justify-between"><span>${u.username.toUpperCase()} — ${u.role}</span></div>`).join('');
+        if(fm) fm.innerHTML = gFields.map(f => `
+            <div class="bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-tight">${f.name}</p>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">${f.type} | Rs ${f.rate}</p>
+                </div>
+                <button onclick="delField('${f.id}')" class="text-red-400 text-lg">🗑️</button>
+            </div>
+        `).join('');
+    }
 
-        window.nuke = async () => {
-            if(!confirm("DELETE ALL LEDGER DATA PERMANENTLY?")) return;
-            for (const r of records) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'records', r.docId));
-            alert("Database Cleared."); nav('dashboard');
-        };
+    window.addField = async () => {
+        const name = document.getElementById('add-f-name').value.trim();
+        const type = document.getElementById('add-f-type').value;
+        const rate = parseInt(document.getElementById('add-f-rate').value);
+        if(!name || isNaN(rate)) return alert("Enter name and rate.");
+        const nFields = [...gFields, { id: 'F'+Date.now(), name, type, rate }];
+        await setDoc(configRef, { items: nFields });
+        document.getElementById('add-f-name').value = '';
+        document.getElementById('add-f-rate').value = '';
+    };
 
-        // --- EXPORTS ---
-        window.shareWA = () => {
-            let t = `*KHYBER TRADERS*\n_Official Mazdoori Report_\n${document.getElementById('rangeLabel').innerText}\n\n`;
-            filtered.forEach(r => t += `📅 *${r.date}* (${r.user.toUpperCase()})\n*Total: Rs ${r.total}*\n_${r.details}_\n---\n`);
-            t += `\n*GRAND TOTAL: Rs ${document.getElementById('sTotal').innerText}*`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(t)}`);
-        };
+    window.delField = async (id) => {
+        if(!confirm("Delete this field?")) return;
+        const nFields = gFields.filter(i => i.id !== id);
+        await setDoc(configRef, { items: nFields });
+    };
 
-        window.exportPDF = () => {
-            const { jsPDF } = window.jspdf;
-            html2canvas(document.getElementById('printArea'), { scale: 2 }).then(canvas => {
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const img = canvas.toDataURL('image/png');
-                const w = pdf.internal.pageSize.getWidth();
-                const h = (canvas.height * w) / canvas.width;
-                pdf.addImage(img, 'PNG', 0, 10, w, h);
-                pdf.save(`KhyberTraders_Report.pdf`);
-            });
-        };
+    window.createUser = async () => {
+        const u = document.getElementById('reg-u').value.trim().toLowerCase();
+        const p = document.getElementById('reg-p').value;
+        if(!u || !p) return alert("Enter username and password.");
+        const exists = gUsers.find(x => x.username === u);
+        if(exists) return alert("Username already exists.");
+        await addDoc(usersRef, { username: u, password: p, role: 'user' });
+        document.getElementById('reg-u').value = '';
+        document.getElementById('reg-p').value = '';
+        alert("Staff registered successfully.");
+    };
 
-        window.exportIMG = () => {
-            html2canvas(document.getElementById('printArea'), { scale: 2 }).then(canvas => {
-                const a = document.createElement('a');
-                a.download = `KhyberTraders_Report.png`;
-                a.href = canvas.toDataURL("image/png");
-                a.click();
-            });
-        };
+    window.nukeHistory = async () => {
+        if(confirm("⚠️ This will permanently erase ALL ledger data. Are you sure?")) {
+            for(const r of gRecords) {
+                await deleteDoc(doc(db, 'kt_records', r.docId));
+            }
+            alert("All records erased.");
+            nav('dashboard');
+        }
+    };
 
-        window.exportCSV = () => {
-            let csv = "Date,User,Labour,Transport,Supply,Total,Details\n";
-            filtered.forEach(r => csv += `${r.date},${r.user},${r.l_v},${r.t_v},${r.s_v || 0},${r.total},"${r.details}"\n`);
-            const a = document.createElement("a");
-            a.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-            a.download = `KhyberTraders_Ledger.csv`;
+    // --- EXPORTS ---
+    window.shareWA = () => {
+        let t = `*KHYBER TRADERS*\n_Official Ledger Report_\n${document.getElementById('h-label').innerText}\n\n`;
+        gFiltered.forEach(r => t += `📅 *${r.date}* (${r.user.toUpperCase()})\nTotal: Rs ${r.total}\nDetails: ${r.details}\n---\n`);
+        t += `\n*GRAND TOTAL: Rs ${document.getElementById('s-total').innerText}*`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(t)}`);
+    };
+
+    window.exportPDF = () => {
+        const { jsPDF } = window.jspdf;
+        html2canvas(document.getElementById('printArea'), { scale: 2 }).then(canvas => {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const img = canvas.toDataURL('image/png');
+            const w = pdf.internal.pageSize.getWidth();
+            const h = (canvas.height * w) / canvas.width;
+            pdf.addImage(img, 'PNG', 0, 10, w, h);
+            pdf.save(`KT_Report_${new Date().toLocaleDateString()}.pdf`);
+        });
+    };
+
+    window.exportIMG = () => {
+        html2canvas(document.getElementById('printArea'), { scale: 2 }).then(canvas => {
+            const a = document.createElement('a');
+            a.download = `KT_Report_${new Date().toLocaleDateString()}.png`;
+            a.href = canvas.toDataURL("image/png");
             a.click();
-        };
+        });
+    };
 
-    </script>
+    window.exportCSV = () => {
+        let csv = "Date,User,Labour,Transport,Supply,Total,Details\n";
+        gFiltered.forEach(r => csv += `${r.date},${r.user},${r.l_v},${r.t_v},${r.s_v || 0},${r.total},"${r.details}"\n`);
+        const a = document.createElement("a");
+        a.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        a.download = `KT_Ledger_${new Date().toLocaleDateString()}.csv`;
+        a.click();
+    };
+
+</script>
+```
+
 </body>
 </html>
-
