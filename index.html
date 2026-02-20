@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khyber Traders - Mazdoori Tracker</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Libraries for PDF and Image export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f3f4f6; 
+        }
+        input[type="number"], input[type="text"], input[type="password"], select { 
+            width: 100%; 
+            padding: 0.5rem; 
+            border-radius: 0.375rem; 
+            border: 1px solid #d1d5db; 
+        }
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-10">
+        
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2" id="headerTitle">Login</h1>
+            <div id="headerNav" class="space-x-2 hidden">
+                <span id="syncStatus" class="text-[10px] text-green-300 font-bold tracking-wide mr-2 uppercase">🟢 Live</span>
+                <button onclick="nav('dashboard')" class="text-sm bg-blue-700 px-3 py-1 rounded hover:bg-blue-800 transition font-medium">Home</button>
+                <button onclick="logout()" class="text-sm bg-red-500 px-3 py-1 rounded hover:bg-red-600 transition font-medium">Logout</button>
+            </div>
+        </header>
+
+        <!-- Login Screen -->
+        <div id="login" class="p-6 flex flex-col justify-center min-h-[80vh]">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-blue-50 border-2 border-blue-600 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-extrabold shadow-sm">KT</div>
+                <h1 class="text-3xl font-extrabold text-blue-900 tracking-tight">Khyber Traders</h1>
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mt-1">Wholesale Veterinary Pharmacy</p>
+                <div class="flex items-center justify-center gap-2 text-[11px] text-gray-500 mt-2 font-medium">
+                    <span>📍 Karachi</span> • <span>📞 03352999006</span>
+                </div>
+                <a href="https://animalhealth.pk" target="_blank" class="text-[12px] font-semibold text-blue-600 hover:text-blue-800 hover:underline mt-1 block">animalhealth.pk</a>
+                
+                <div class="mt-6 mb-4 border-b border-gray-200 w-16 mx-auto"></div>
+                <h2 class="text-lg font-bold text-gray-700">Cloud Tracker App</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow border border-gray-200">
+                <h2 class="text-xl font-bold text-center mb-6 text-gray-800">Sign In</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">Username</label>
+                        <input type="text" id="loginUser" placeholder="Enter username..." class="bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">Password</label>
+                        <input type="password" id="loginPass" placeholder="Enter password..." class="bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <button id="loginBtn" onclick="doLogin()" class="w-full bg-gray-400 text-white font-bold py-3 rounded-lg shadow-md mt-2 transition" disabled>
+                        <div class="spinner"></div> Connecting to Cloud...
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard" class="hidden p-6 space-y-4">
+            <div class="text-center mb-6 mt-2 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <h2 class="text-2xl font-bold">Welcome, <span id="welcomeName" class="text-blue-600 uppercase">User</span></h2>
+                <p class="text-gray-600 text-sm font-semibold mt-1">Khyber Traders - Karachi</p>
+            </div>
+
+            <button onclick="nav('entry')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow hover:bg-blue-700 flex items-center justify-center space-x-3 transition transform active:scale-95">
+                <span class="text-2xl leading-none">+</span> <span class="text-lg">New Daily Entry</span>
+            </button>
+            
+            <button onclick="nav('history')" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow hover:bg-green-700 flex items-center justify-center space-x-3 transition transform active:scale-95">
+                <span class="text-xl">📋</span> <span class="text-lg">History & Detailed Export</span>
+            </button>
+            
+            <!-- This button is only visible to Admins -->
+            <button id="btnAdminPanel" onclick="nav('adminPanel')" class="w-full bg-gray-800 text-white font-bold py-4 rounded-xl shadow hover:bg-gray-900 flex items-center justify-center space-x-3 transition transform active:scale-95">
+                <span class="text-xl">⚙️</span> <span class="text-lg">Admin Panel</span>
+            </button>
+        </div>
+
+        <!-- New Entry Screen -->
+        <div id="entry" class="hidden p-6">
+            <div class="mb-4 bg-white p-3 rounded-lg border shadow-sm">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Entry Date</label>
+                <input type="date" id="entryDate" class="w-full p-2 border rounded-md bg-gray-50 font-medium" required>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4">
+                <h2 class="text-lg font-bold text-blue-900 mb-3 border-b pb-1">Labour Items</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-semibold text-gray-600">1st floor carton</label><input type="number" id="l_1st_carton" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">1st floor bags</label><input type="number" id="l_1st_bags" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">Makkah Market</label><input type="number" id="l_makkah" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">2nd floor</label><input type="number" id="l_2nd" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">3rd floor</label><input type="number" id="l_3rd" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">Ahmed Chamber</label><input type="number" id="l_ahmed" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border shadow-sm">
+                <h2 class="text-lg font-bold text-blue-900 mb-3 border-b pb-1">Transport Items</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-semibold text-gray-600">TPT Out</label><input type="number" id="t_tpt_out" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div><label class="text-xs font-semibold text-gray-600">BABA</label><input type="number" id="t_baba" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                    <div class="col-span-2"><label class="text-xs font-semibold text-gray-600">TPT OTHERS</label><input type="number" id="t_others" min="0" placeholder="0" class="calc-input bg-gray-50 focus:bg-white"></div>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-blue-50 border-2 border-blue-200 p-4 rounded-xl shadow-inner">
+                <div class="flex justify-between text-sm mb-1 text-gray-700 font-medium"><span>Labour (<span id="dispLabRate"></span>):</span> <span id="labourTotal" class="font-bold text-black">0</span></div>
+                <div class="flex justify-between text-sm mb-1 text-gray-700 font-medium"><span>Transport (<span id="dispTraRate"></span>):</span> <span id="transportTotal" class="font-bold text-black">0</span></div>
+                <div class="flex justify-between text-xl mt-3 pt-3 border-t-2 border-blue-200">
+                    <span class="font-bold text-blue-900 uppercase tracking-wide">Grand Total:</span> 
+                    <span class="font-extrabold text-blue-900">Rs <span id="grandTotal">0</span></span>
+                </div>
+            </div>
+
+            <button id="saveBtn" onclick="saveEntry()" class="w-full mt-6 bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition transform active:scale-95 text-lg">Save Daily Entry to Cloud</button>
+        </div>
+
+        <!-- History & Export Screen -->
+        <div id="history" class="hidden p-4">
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="shareWhatsApp()" class="bg-green-500 text-white py-3 rounded-lg shadow font-bold text-sm flex justify-center items-center gap-1 hover:bg-green-600 transition">💬 WA Text</button>
+                <button onclick="exportImage()" class="bg-indigo-500 text-white py-3 rounded-lg shadow font-bold text-sm flex justify-center items-center gap-1 hover:bg-indigo-600 transition">🖼️ Image</button>
+                <button onclick="exportPDF()" class="bg-red-500 text-white py-3 rounded-lg shadow font-bold text-sm flex justify-center items-center gap-1 hover:bg-red-600 transition">📄 PDF</button>
+                <button onclick="exportCSV()" class="bg-yellow-500 text-white py-3 rounded-lg shadow font-bold text-sm flex justify-center items-center gap-1 hover:bg-yellow-600 transition">📊 CSV</button>
+            </div>
+
+            <div id="printArea" class="bg-white p-4 rounded-xl border shadow-sm">
+                <!-- Branding Header for Print/Export -->
+                <div class="text-center mb-4 border-b-2 border-gray-800 pb-3">
+                    <h2 class="text-2xl font-black text-blue-900 tracking-wider uppercase">Khyber Traders</h2>
+                    <p class="text-[12px] font-bold text-gray-600 uppercase tracking-widest mt-1">Wholesale Veterinary Pharmacy</p>
+                    <p class="text-[11px] text-gray-500 mt-1 font-medium">Karachi | Ph: 03352999006 | animalhealth.pk</p>
+                    <div class="mt-3 bg-gray-100 py-1.5 rounded-md text-sm font-bold text-gray-800 uppercase tracking-wide border border-gray-200" id="reportHeader">Detailed Weekly Ledger</div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-blue-50 text-blue-900 border-b-2 border-blue-200">
+                                <th class="p-2 font-bold">Date</th>
+                                <th class="p-2 font-bold">User</th>
+                                <th class="p-2 font-bold">Labour</th>
+                                <th class="p-2 font-bold">Transp.</th>
+                                <th class="p-2 font-bold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTable" class="text-gray-700">
+                            <!-- Records and Item Details injected here by JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-800 text-white font-bold text-sm">
+                                <td class="p-3 rounded-bl-md" colspan="2">GRAND TOTAL:</td>
+                                <td class="p-3 text-green-300" id="sumLabour">0</td>
+                                <td class="p-3 text-yellow-300" id="sumTransport">0</td>
+                                <td class="p-3 rounded-br-md text-white text-base" id="sumTotal">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <p class="text-xs text-center text-gray-400 mt-6 font-medium">Only Admins can clear the history to start a new week.</p>
+        </div>
+
+        <!-- Admin Panel Screen -->
+        <div id="adminPanel" class="hidden p-6 space-y-6">
+            
+            <!-- Global Rates -->
+            <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2 text-lg border-b pb-2"><span>💰</span> Manage Rates (Cloud)</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Labour Rate (Rs)</label>
+                        <input type="number" id="rateLabour" class="bg-gray-50 focus:bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Transport Rate (Rs)</label>
+                        <input type="number" id="rateTransport" class="bg-gray-50 focus:bg-white">
+                    </div>
+                </div>
+                <button onclick="saveRates()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 text-sm mt-4 transition">Update Global Rates</button>
+            </div>
+
+            <!-- Create Users -->
+            <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2 text-lg border-b pb-2"><span>👥</span> Create New User</h3>
+                <label class="block text-xs font-bold text-gray-600 mb-1">Username (No spaces)</label>
+                <input type="text" id="newUsername" placeholder="e.g. ali" class="mb-3 bg-gray-50 focus:bg-white">
+                
+                <label class="block text-xs font-bold text-gray-600 mb-1">Password</label>
+                <input type="password" id="newPassword" placeholder="Set a password..." class="mb-4 bg-gray-50 focus:bg-white">
+
+                <button onclick="createUser()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow hover:bg-green-700 text-sm transition">Create Account</button>
+                
+                <!-- Display Existing Users -->
+                <div class="mt-5 pt-4 border-t border-gray-200">
+                    <p class="text-sm font-bold text-gray-700 mb-2">Registered Users:</p>
+                    <ul id="userList" class="text-sm text-gray-600 space-y-2 bg-gray-50 p-3 rounded-lg border"></ul>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2 text-lg border-b pb-2"><span>🔑</span> Change Password</h3>
+                <label class="block text-xs font-bold text-gray-600 mb-1">Select User</label>
+                <select id="pwdUserSelect" class="bg-gray-50 focus:bg-white mb-3 text-sm font-medium text-gray-700"></select>
+
+                <label class="block text-xs font-bold text-gray-600 mb-1">New Password</label>
+                <input type="password" id="newPwdInput" placeholder="Enter new password..." class="mb-4 bg-gray-50 focus:bg-white">
+
+                <button onclick="changePassword()" class="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg shadow hover:bg-yellow-600 text-sm transition">Update Password</button>
+            </div>
+
+            <!-- Clear Data -->
+            <div class="bg-red-50 p-5 rounded-xl border-2 border-red-200 mt-8">
+                <h3 class="font-bold text-red-800 mb-2 text-lg">Start New Week</h3>
+                <p class="text-xs text-red-600 mb-4 font-medium">This will permanently delete all current history across all users so you can start a fresh ledger.</p>
+                <button onclick="clearHistory()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg shadow hover:bg-red-700 transition">Clear All History</button>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        // ==========================================
+        // YOUR FIREBASE CONFIGURATION
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4jzSmYJeDgULCDdpAblmS4x-wU9szMJc",
+            authDomain: "mazdooriapp.firebaseapp.com",
+            projectId: "mazdooriapp",
+            storageBucket: "mazdooriapp.firebasestorage.app",
+            messagingSenderId: "407506330676",
+            appId: "1:407506330676:web:00fdf738e749ecea3c1661",
+            measurementId: "G-NMJXVHCPPJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- CLOUD DATABASE PATHS ---
+        const usersRef = collection(db, 'kt_users');
+        const recordsRef = collection(db, 'kt_records');
+        const settingsRef = doc(db, 'kt_settings', 'global');
+
+        // --- GLOBAL STATE ---
+        let users = [];
+        let records = [];
+        let settings = { labRate: 18, transRate: 30 };
+        
+        let currentUser = JSON.parse(localStorage.getItem('mazdoori_current_user')) || null;
+        let isDbReady = false;
+
+        // --- INITIALIZE CLOUD CONNECTION ---
+        async function bootCloud() {
+            try {
+                // Signs in silently to allow database access securely
+                await signInAnonymously(auth);
+            } catch(e) {
+                console.error("Cloud Connection Failed. Check Firebase Auth settings:", e);
+                alert("Could not connect to Firebase. Ensure Anonymous Authentication is enabled.");
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setupCloudListeners();
+            }
+        });
+
+        // --- REAL-TIME LISTENERS ---
+        function setupCloudListeners() {
+            // Listen for User changes
+            onSnapshot(usersRef, (snap) => {
+                users = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                
+                // Safety net: Create default admin if collection is completely empty
+                if(users.length === 0) {
+                    addDoc(usersRef, { username: 'admin', password: '123', role: 'admin' });
+                }
+
+                if(document.getElementById('adminPanel').classList.contains('hidden') === false) {
+                    populateAdminPanel();
+                }
+            }, (err) => console.error("Firestore Error (Users):", err));
+
+            // Listen for Record changes
+            onSnapshot(recordsRef, (snap) => {
+                records = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+                renderTable();
+            }, (err) => console.error(err));
+
+            // Listen for Rate changes
+            onSnapshot(settingsRef, (docSnap) => {
+                if(docSnap.exists()) {
+                    settings = docSnap.data();
+                } else {
+                    setDoc(settingsRef, { labRate: 18, transRate: 30 });
+                }
+                updateDisplayRates();
+                calculateTotals(); 
+            }, (err) => console.error(err));
+
+            // Unlock Login Screen
+            isDbReady = true;
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = "Login";
+            btn.classList.replace('bg-gray-400', 'bg-blue-600');
+            btn.classList.add('hover:bg-blue-700');
+            btn.disabled = false;
+
+            // Check if already logged in locally
+            if(currentUser) {
+                document.getElementById('headerNav').classList.remove('hidden');
+                document.getElementById('welcomeName').innerText = currentUser.username;
+                
+                if(currentUser.role === 'admin') {
+                    document.getElementById('btnAdminPanel').classList.remove('hidden');
+                } else {
+                    document.getElementById('btnAdminPanel').classList.add('hidden');
+                }
+                nav('dashboard');
+                initApp();
+            }
+        }
+
+        bootCloud();
+
+        // --- AUTH LOGIC (App Level) ---
+        window.doLogin = function() {
+            if(!isDbReady) return alert("Please wait for cloud connection.");
+
+            const u = document.getElementById('loginUser').value.trim().toLowerCase();
+            const p = document.getElementById('loginPass').value;
+
+            const foundUser = users.find(x => x.username.toLowerCase() === u && x.password === p);
+            
+            if (foundUser) {
+                currentUser = foundUser;
+                localStorage.setItem('mazdoori_current_user', JSON.stringify(currentUser));
+                document.getElementById('loginUser').value = '';
+                document.getElementById('loginPass').value = '';
+                
+                document.getElementById('headerNav').classList.remove('hidden');
+                document.getElementById('welcomeName').innerText = currentUser.username;
+                
+                if(currentUser.role === 'admin') {
+                    document.getElementById('btnAdminPanel').classList.remove('hidden');
+                } else {
+                    document.getElementById('btnAdminPanel').classList.add('hidden');
+                }
+                initApp();
+                nav('dashboard');
+            } else {
+                alert("Invalid Username or Password.");
+            }
+        };
+
+        window.logout = function() {
+            if(confirm("Are you sure you want to log out?")) {
+                currentUser = null;
+                localStorage.removeItem('mazdoori_current_user');
+                document.getElementById('headerNav').classList.add('hidden');
+                nav('login');
+            }
+        };
+
+        window.nav = function(screenId) {
+            if(!currentUser && screenId !== 'login') screenId = 'login';
+            if(currentUser && screenId === 'login') screenId = 'dashboard';
+
+            const screens = ['login', 'dashboard', 'entry', 'history', 'adminPanel'];
+            screens.forEach(id => document.getElementById(id).classList.add('hidden'));
+
+            document.getElementById(screenId).classList.remove('hidden');
+            
+            if(screenId === 'adminPanel') populateAdminPanel();
+
+            const titles = { 'login': 'Login', 'dashboard': 'Dashboard', 'entry': 'New Entry', 'history': 'Detailed History', 'adminPanel': 'Admin Panel' };
+            document.getElementById('headerTitle').innerText = titles[screenId];
+            window.scrollTo(0,0);
+        };
+
+        // --- CORE UI LOGIC ---
+        function initApp() {
+            document.getElementById('entryDate').valueAsDate = new Date();
+        }
+
+        function updateDisplayRates() {
+            document.getElementById('dispLabRate').innerText = "Rs " + settings.labRate;
+            document.getElementById('dispTraRate').innerText = "Rs " + settings.transRate;
+        }
+
+        document.querySelectorAll('.calc-input').forEach(input => { input.addEventListener('input', calculateTotals); });
+
+        function calculateTotals() {
+            const l_qty = ['l_1st_carton', 'l_1st_bags', 'l_makkah', 'l_2nd', 'l_3rd', 'l_ahmed'].map(id => parseInt(document.getElementById(id).value) || 0).reduce((a, b) => a + b, 0);
+            const t_qty = ['t_tpt_out', 't_baba', 't_others'].map(id => parseInt(document.getElementById(id).value) || 0).reduce((a, b) => a + b, 0);
+
+            const l_total = l_qty * settings.labRate;
+            const t_total = t_qty * settings.transRate;
+
+            document.getElementById('labourTotal').innerText = l_total;
+            document.getElementById('transportTotal').innerText = t_total;
+            document.getElementById('grandTotal').innerText = l_total + t_total;
+        }
+
+        window.saveEntry = async function() {
+            if(!currentUser) return;
+            const date = document.getElementById('entryDate').value;
+            if(!date) return alert("Please select a date.");
+
+            const grandTotal = parseInt(document.getElementById('grandTotal').innerText);
+            if(grandTotal === 0) return alert("Please enter at least one item.");
+
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Saving to Cloud...";
+            btn.disabled = true;
+
+            const l_1st_carton = parseInt(document.getElementById('l_1st_carton').value) || 0;
+            const l_1st_bags = parseInt(document.getElementById('l_1st_bags').value) || 0;
+            const l_makkah = parseInt(document.getElementById('l_makkah').value) || 0;
+            const l_2nd = parseInt(document.getElementById('l_2nd').value) || 0;
+            const l_3rd = parseInt(document.getElementById('l_3rd').value) || 0;
+            const l_ahmed = parseInt(document.getElementById('l_ahmed').value) || 0;
+
+            const t_tpt_out = parseInt(document.getElementById('t_tpt_out').value) || 0;
+            const t_baba = parseInt(document.getElementById('t_baba').value) || 0;
+            const t_others = parseInt(document.getElementById('t_others').value) || 0;
+
+            let labItems = [];
+            if(l_1st_carton) labItems.push(`1st Carton(${l_1st_carton})`);
+            if(l_1st_bags) labItems.push(`1st Bags(${l_1st_bags})`);
+            if(l_makkah) labItems.push(`Makkah(${l_makkah})`);
+            if(l_2nd) labItems.push(`2nd fl(${l_2nd})`);
+            if(l_3rd) labItems.push(`3rd fl(${l_3rd})`);
+            if(l_ahmed) labItems.push(`Ahmed(${l_ahmed})`);
+
+            let tptItems = [];
+            if(t_tpt_out) tptItems.push(`Out(${t_tpt_out})`);
+            if(t_baba) tptItems.push(`BABA(${t_baba})`);
+            if(t_others) tptItems.push(`Others(${t_others})`);
+
+            const detailString = `Lab: ${labItems.join(', ') || '-'} | Tpt: ${tptItems.join(', ') || '-'}`;
+
+            const entryData = {
+                timestamp: Date.now(),
+                date: date,
+                username: currentUser.username, 
+                labour_total: parseInt(document.getElementById('labourTotal').innerText),
+                transport_total: parseInt(document.getElementById('transportTotal').innerText),
+                grand_total: grandTotal,
+                details: detailString
+            };
+
+            try {
+                await addDoc(recordsRef, entryData);
+                document.querySelectorAll('.calc-input').forEach(input => input.value = '');
+                calculateTotals();
+                nav('dashboard');
+                alert("Entry Saved Successfully!");
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert("Failed to save entry to cloud.");
+            } finally {
+                btn.innerText = "Save Daily Entry to Cloud";
+                btn.disabled = false;
+            }
+        };
+
+        function renderTable() {
+            const tbody = document.getElementById('recordsTable');
+            tbody.innerHTML = '';
+            let sLab = 0, sTra = 0, sTot = 0;
+            
+            const sorted = [...records].sort((a,b) => a.timestamp - b.timestamp);
+            
+            sorted.forEach(record => {
+                sLab += record.labour_total; sTra += record.transport_total; sTot += record.grand_total;
+                
+                tbody.innerHTML += `
+                    <tr class="bg-white border-t border-gray-200">
+                        <td class="p-2 pt-3">${record.date}</td>
+                        <td class="p-2 pt-3 font-bold text-blue-600 uppercase text-[10px] tracking-wide">${record.username}</td>
+                        <td class="p-2 pt-3">${record.labour_total}</td>
+                        <td class="p-2 pt-3">${record.transport_total}</td>
+                        <td class="p-2 pt-3 font-black text-gray-800">${record.grand_total}</td>
+                    </tr>
+                    <tr class="bg-gray-50 border-b border-gray-300">
+                        <td colspan="5" class="px-2 pb-3 pt-1 text-[10px] text-gray-500 italic whitespace-normal leading-tight">
+                            📝 ${record.details || 'No details'}
+                        </td>
+                    </tr>`;
+            });
+
+            document.getElementById('sumLabour').innerText = sLab;
+            document.getElementById('sumTransport').innerText = sTra;
+            document.getElementById('sumTotal').innerText = sTot;
+        }
+
+        // --- ADMIN SPECIFIC LOGIC (Writing to Cloud) ---
+        function populateAdminPanel() {
+            document.getElementById('rateLabour').value = settings.labRate;
+            document.getElementById('rateTransport').value = settings.transRate;
+            
+            const list = document.getElementById('userList');
+            const pwdSelect = document.getElementById('pwdUserSelect');
+            
+            list.innerHTML = '';
+            pwdSelect.innerHTML = '';
+
+            users.forEach(u => {
+                const roleBadge = u.role === 'admin' ? `<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase ml-2">Admin</span>` : '';
+                list.innerHTML += `<li class="flex items-center">▪ <span class="font-bold uppercase ml-2 w-20">${u.username}</span> ${roleBadge}</li>`;
+                pwdSelect.innerHTML += `<option value="${u.username}">${u.username.toUpperCase()} ${u.role === 'admin' ? '(Admin)' : ''}</option>`;
+            });
+        }
+
+        window.saveRates = async function() {
+            if(currentUser.role !== 'admin') return;
+            const newLab = parseInt(document.getElementById('rateLabour').value) || 18;
+            const newTrans = parseInt(document.getElementById('rateTransport').value) || 30;
+            
+            try {
+                await setDoc(settingsRef, { labRate: newLab, transRate: newTrans });
+                alert("Rates Updated Globally!");
+            } catch(e) {
+                console.error(e);
+                alert("Error updating rates.");
+            }
+        };
+
+        window.createUser = async function() {
+            if(currentUser.role !== 'admin') return;
+
+            const u = document.getElementById('newUsername').value.trim().toLowerCase();
+            const p = document.getElementById('newPassword').value;
+
+            if(!u || !p) return alert("Please fill both username and password.");
+            if(u.includes(" ")) return alert("Username cannot contain spaces.");
+            if(users.some(x => x.username.toLowerCase() === u)) return alert("Username already exists!");
+
+            try {
+                await addDoc(usersRef, { username: u, password: p, role: 'user' });
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                alert(`User '${u.toUpperCase()}' created successfully!`);
+            } catch(e) {
+                console.error(e);
+                alert("Error creating user.");
+            }
+        };
+
+        window.changePassword = async function() {
+            if(currentUser.role !== 'admin') return;
+
+            const targetUsername = document.getElementById('pwdUserSelect').value;
+            const newPass = document.getElementById('newPwdInput').value;
+
+            if(!newPass) return alert("Please enter the new password.");
+
+            const targetUserObj = users.find(u => u.username === targetUsername);
+            
+            if(targetUserObj && targetUserObj.docId) {
+                try {
+                    const userDocRef = doc(db, 'kt_users', targetUserObj.docId);
+                    await updateDoc(userDocRef, { password: newPass });
+                    
+                    if(currentUser.username === targetUsername) {
+                        currentUser.password = newPass;
+                        localStorage.setItem('mazdoori_current_user', JSON.stringify(currentUser));
+                    }
+
+                    document.getElementById('newPwdInput').value = '';
+                    alert(`Password for ${targetUsername.toUpperCase()} has been successfully updated.`);
+                } catch(e) {
+                    console.error(e);
+                    alert("Error updating password.");
+                }
+            }
+        };
+
+        window.clearHistory = async function() {
+            if(currentUser.role !== 'admin') return;
+
+            if(confirm("🚨 DANGER: Are you sure? This will delete ALL saved entries from ALL users globally and cannot be undone.")) {
+                try {
+                    for (const record of records) {
+                        const recRef = doc(db, 'kt_records', record.docId);
+                        await deleteDoc(recRef);
+                    }
+                    alert("All history cleared. Ready for a new week.");
+                    nav('dashboard');
+                } catch(e) {
+                    console.error(e);
+                    alert("Error clearing history.");
+                }
+            }
+        };
+
+        // --- EXPORT FUNCTIONS ---
+        window.shareWhatsApp = function() {
+            if(records.length === 0) return alert("No data to share.");
+            let text = `*KHYBER TRADERS*\n_Wholesale Veterinary Pharmacy_\n*Weekly Detailed Mazdoori Report*\n\n`;
+            
+            const sorted = [...records].sort((a,b) => a.timestamp - b.timestamp);
+            sorted.forEach(r => {
+                text += `📅 *${r.date}* (By: ${r.username.toUpperCase()})\nLab: Rs ${r.labour_total} | Tpt: Rs ${r.transport_total}\n*Total: Rs ${r.grand_total}*\n_Items: ${r.details}_\n---\n`;
+            });
+            text += `\n*GRAND TOTAL: Rs ${document.getElementById('sumTotal').innerText}*\n📍 Karachi | 📞 03352999006\n🌐 animalhealth.pk`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+        };
+
+        window.exportImage = function() {
+            if(records.length === 0) return alert("No data to export.");
+            const printArea = document.getElementById('printArea');
+            html2canvas(printArea, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                let link = document.createElement('a');
+                link.download = `KT_Detailed_Report_${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            }).catch(err => alert("Could not generate image."));
+        };
+
+        window.exportPDF = function() {
+            if(records.length === 0) return alert("No data to export.");
+            const { jsPDF } = window.jspdf;
+            const printArea = document.getElementById('printArea');
+            
+            html2canvas(printArea, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight);
+                pdf.save(`KT_Detailed_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            }).catch(err => alert("Could not generate PDF."));
+        };
+
+        window.exportCSV = function() {
+            if(records.length === 0) return alert("No data to export.");
+            let csv = "Date,User,Labour Total,Transport Total,Grand Total,Details\n";
+            const sorted = [...records].sort((a,b) => a.timestamp - b.timestamp);
+            sorted.forEach(r => { 
+                csv += `${r.date},${r.username},${r.labour_total},${r.transport_total},${r.grand_total},"${r.details}"\n`; 
+            });
+            csv += `TOTAL,,${document.getElementById('sumLabour').innerText},${document.getElementById('sumTransport').innerText},${document.getElementById('sumTotal').innerText},""\n`;
+            
+            const link = document.createElement("a");
+            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+            link.download = `KT_Detailed_Report_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click(); document.body.removeChild(link);
+        };
+    </script>
+</body>
+</html>
+
+
