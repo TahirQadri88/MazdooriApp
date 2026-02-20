@@ -1,182 +1,185 @@
-const GITHUB_TOKEN = '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';
+// app.js - Local + GitHub Manual Sync (No Firebase)
+
+// === CONFIG - CHANGE THESE ONLY ===
+const GITHUB_TOKEN = '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'; // ← YOUR TOKEN HERE
 const GITHUB_OWNER = 'TahirQadri88';
 const GITHUB_REPO = 'MazdooriApp';
 const GITHUB_FILE_PATH = 'records.json';
-        // ==================== ALL APP CODE BELOW ====================
 
-        const appId = 'khyber-traders';
-        const recordsPath = `/artifacts/${appId}/public/data/records`;
-        const usersPath = `/artifacts/${appId}/public/data/users`;
-        const configPath = `/artifacts/${appId}/public/data/config/main`;
+// Local storage
+const LOCAL_RECORDS_KEY = 'mazdoori_my_records';
 
-        const defaultFields = {
-            Labour: [
-                { name: '1st floor carton', rate: 18 },
-                { name: '1st floor bags', rate: 18 },
-                { name: 'Makkah Market', rate: 18 },
-                { name: '2nd floor', rate: 18 },
-                { name: '3rd floor', rate: 18 },
-                { name: 'Ahmed Chamber', rate: 18 }
-            ],
-            Transport: [
-                { name: 'TPT Out', rate: 30 },
-                { name: 'BABA', rate: 30 },
-                { name: 'TPT OTHERS', rate: 30 }
-            ]
-        };
+// Master admin fallback
+const masterAdmin = { username: 'admin', password: '123' };
+const LOGIN_STATE = 'loginState';
 
-        const masterAdmin = { username: 'admin', password: '123' };
-        const LOGIN_STATE = 'loginState';
+let currentUser = null;
+let isAdmin = false;
 
-        let currentUser = null;
-        let isAdmin = false;
-        let fields = { Labour: [], Transport: [], Supply: [] };
+// Load my local records
+function loadMyRecords() {
+  const saved = localStorage.getItem(LOCAL_RECORDS_KEY);
+  return saved ? JSON.parse(saved) : [];
+}
 
-        function guardFirestore(fn) { if (!auth.currentUser) return; fn(); }
+// Save one record locally
+function saveRecordLocally(record) {
+  const records = loadMyRecords();
+  // Prevent duplicate for same date
+  if (records.some(r => r.date === record.date)) {
+    alert('Aaj ka record pehle se saved hai.');
+    return;
+  }
+  records.push(record);
+  localStorage.setItem(LOCAL_RECORDS_KEY, JSON.stringify(records));
+  alert('Kaam local mein save ho gaya. Sync button se admin ko bhej dein.');
+}
 
-        auth.signInAnonymously().catch(console.error);
+// Sync to GitHub
+async function syncToGitHub() {
+  if (!GITHUB_TOKEN || GITHUB_TOKEN === 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx') {
+    alert('Admin ne token set nahi kiya. Sync nahi ho sakta.');
+    return;
+  }
 
-        async function loadConfig() {
-            const configDoc = await db.doc(configPath).get();
-            if (configDoc.exists && configDoc.data().fields) {
-                fields = configDoc.data().fields;
-            } else {
-                fields = defaultFields;
-                await db.doc(configPath).set({ fields });
-            }
-        }
+  const myRecords = loadMyRecords();
+  if (myRecords.length === 0) {
+    alert('Koi naya record nahi hai sync karne ke liye.');
+    return;
+  }
 
-        // LOGIN
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            alert("🔘 4. Login button was TAPPED!");
-
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-
-            if (username === masterAdmin.username && password === masterAdmin.password) {
-                currentUser = { uid: 'admin', username: 'admin' };
-                isAdmin = true;
-                postLogin();
-                return;
-            }
-            alert('Invalid credentials');
-        });
-
-        function postLogin() {
-            localStorage.setItem(LOGIN_STATE, JSON.stringify(currentUser));
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            if (isAdmin) {
-                document.getElementById('admin-btn').style.display = 'block';
-                document.querySelector('#view-mode option[value="summary"]').style.display = 'block';
-            }
-            loadConfig();
-            showScreen('add-work-screen');
-        }
-
-        // Check saved login
-        const savedState = localStorage.getItem(LOGIN_STATE);
-        if (savedState) {
-            currentUser = JSON.parse(savedState);
-            isAdmin = currentUser.username === 'admin';
-            postLogin();
-        }
-
-        // Logout
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem(LOGIN_STATE);
-            location.reload();
-        });
-
-        // Navigation
-        document.getElementById('add-work-btn').addEventListener('click', () => showScreen('add-work-screen'));
-        document.getElementById('ledger-btn').addEventListener('click', () => showScreen('ledger-screen'));
-        document.getElementById('admin-btn').addEventListener('click', () => showScreen('admin-panel'));
-
-        function showScreen(screenId) {
-            ['add-work-screen','ledger-screen','admin-panel'].forEach(id => document.getElementById(id).style.display = 'none');
-            document.getElementById(screenId).style.display = 'block';
-            if (screenId === 'add-work-screen') loadFields();
-            if (screenId === 'admin-panel') loadAdminData();
-            if (screenId === 'ledger-screen') loadLedger();
-        }
-
-        function loadFields() {
-            const container = document.getElementById('fields-container');
-            container.innerHTML = '';
-            Object.keys(fields).forEach(type => {
-                const group = document.createElement('div');
-                group.className = 'field-group';
-                group.innerHTML = `<h3>${type} (@ Rs ${fields[type][0].rate})</h3>`;
-                fields[type].forEach(field => {
-                    group.innerHTML += `
-                        <div class="field">
-                            <label>${field.name}</label>
-                            <input type="number" data-name="${field.name}" value="0" min="0">
-                        </div>
-                    `;
-                });
-                container.appendChild(group);
-            });
-        }
-
-        // Add Work, Admin, Ledger, Share, Export, Print functions (same as before)
-        const workDateInput = document.getElementById('work-date');
-        workDateInput.addEventListener('change', async () => {
-            const date = workDateInput.value;
-            if (!date) return;
-            guardFirestore(async () => {
-                const records = await db.collection(recordsPath).get();
-                const existing = records.docs.find(doc => doc.data().uid === currentUser.uid && doc.data().date === date);
-                const inputs = document.querySelectorAll('#fields-container input');
-                inputs.forEach(input => input.value = 0);
-                if (existing) {
-                    alert('Previous record found for this date');
-                    const data = existing.data().quantities || {};
-                    inputs.forEach(input => input.value = data[input.dataset.name] || 0);
-                    document.getElementById('save-work-btn').textContent = 'Update My Work';
-                    document.getElementById('save-work-btn').dataset.mode = 'update';
-                    document.getElementById('save-work-btn').dataset.docId = existing.id;
-                } else {
-                    document.getElementById('save-work-btn').textContent = 'Save My Work';
-                    document.getElementById('save-work-btn').dataset.mode = 'new';
-                }
-            });
-        });
-
-        document.getElementById('save-work-btn').addEventListener('click', async () => {
-            const date = workDateInput.value;
-            if (!date) return alert('Select a date');
-            const quantities = {};
-            let total = 0;
-            document.querySelectorAll('#fields-container input').forEach(input => {
-                const qty = parseInt(input.value) || 0;
-                const name = input.dataset.name;
-                quantities[name] = qty;
-                const type = Object.keys(fields).find(t => fields[t].some(f => f.name === name));
-                const rate = fields[type].find(f => f.name === name).rate;
-                total += qty * rate;
-            });
-            const record = { uid: currentUser.uid, username: currentUser.username, date, quantities, total };
-            guardFirestore(async () => {
-                const mode = document.getElementById('save-work-btn').dataset.mode;
-                if (mode === 'update') {
-                    const docId = document.getElementById('save-work-btn').dataset.docId;
-                    await db.collection(recordsPath).doc(docId).update(record);
-                } else {
-                    await db.collection(recordsPath).add(record);
-                }
-                alert('Work saved!');
-            });
-        });
-
-        // (All Admin, Ledger, Share, Export, Print functions are included in the full paste - just use the complete version)
-
-        // For the rest of the functions (loadAdminData, editUser, loadLedger, shareWhatsApp, etc.), copy the full complete version from this link to make sure nothing is missing:
-        // https://pastebin.com/raw/7vK9pM3r
-
-        // Click the link, copy ALL text, paste it after the line above (replace the comment)
+  try {
+    // Get current file from GitHub
+    let sha = null;
+    let allRecords = [];
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
+        { headers: { Authorization: `token ${GITHUB_TOKEN}` } }
+      );
+      if (res.ok) {
+        const file = await res.json();
+        sha = file.sha;
+        allRecords = JSON.parse(atob(file.content));
+      }
     } catch (e) {
-        alert("❌ FIREBASE ERROR: " + e.message + "\nPlease screenshot this and send me");
+      // File not exist yet - ok
     }
-};
+
+    // Append only my new records (simple dedup by date + username)
+    const existingDates = new Set(allRecords.map(r => r.date + r.username));
+    myRecords.forEach(rec => {
+      const key = rec.date + currentUser.username;
+      if (!existingDates.has(key)) {
+        allRecords.push({ ...rec, username: currentUser.username });
+      }
+    });
+
+    // Update GitHub
+    const content = btoa(JSON.stringify(allRecords, null, 2));
+    const body = {
+      message: `Mazdoori sync from ${currentUser.username} - ${new Date().toISOString()}`,
+      content: content,
+      sha: sha
+    };
+
+    const updateRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    if (!updateRes.ok) {
+      const err = await updateRes.json();
+      throw new Error(err.message || 'Failed to sync');
+    }
+
+    alert('Sync ho gaya! Data GitHub par chala gaya.');
+  } catch (err) {
+    alert('Sync fail ho gaya: ' + err.message + '\nInternet check karein.');
+    console.error(err);
+  }
+}
+
+// Pull latest for ledger
+async function pullFromGitHub() {
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`,
+      { headers: { Authorization: `token ${GITHUB_TOKEN}` } }
+    );
+    if (!res.ok) throw new Error('Cannot load data');
+    const file = await res.json();
+    const allRecords = JSON.parse(atob(file.content));
+
+    // Show in ledger
+    const content = document.getElementById('ledger-content');
+    content.innerHTML = '<h3>All Records</h3>';
+    allRecords.forEach(r => {
+      content.innerHTML += `<p>${r.date} - ${r.username} - Total: Rs ${r.total}</p>`;
+    });
+  } catch (err) {
+    alert('Pull fail: ' + err.message);
+  }
+}
+
+// Simple login (keep or remove later)
+document.getElementById('login-btn').addEventListener('click', () => {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if (username === masterAdmin.username && password === masterAdmin.password) {
+    currentUser = { uid: 'admin', username: 'admin' };
+    isAdmin = true;
+    localStorage.setItem(LOGIN_STATE, JSON.stringify(currentUser));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('admin-btn').style.display = 'block';
+  } else {
+    alert('Invalid credentials');
+  }
+});
+
+// Check saved login
+const saved = localStorage.getItem(LOGIN_STATE);
+if (saved) {
+  currentUser = JSON.parse(saved);
+  isAdmin = currentUser.username === 'admin';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  if (isAdmin) document.getElementById('admin-btn').style.display = 'block';
+}
+
+// Logout
+document.getElementById('logout-btn').addEventListener('click', () => {
+  localStorage.removeItem(LOGIN_STATE);
+  location.reload();
+});
+
+// Navigation (simplified)
+document.getElementById('add-work-btn').addEventListener('click', () => {
+  document.getElementById('add-work-screen').style.display = 'block';
+  document.getElementById('ledger-screen').style.display = 'none';
+});
+document.getElementById('ledger-btn').addEventListener('click', () => {
+  document.getElementById('ledger-screen').style.display = 'block';
+  document.getElementById('add-work-screen').style.display = 'none';
+});
+document.getElementById('admin-btn').addEventListener('click', () => {
+  alert('Admin view - abhi sirf ledger dekhein');
+});
+
+// Sync & Pull buttons
+document.getElementById('sync-btn')?.addEventListener('click', syncToGitHub);
+document.getElementById('pull-btn')?.addEventListener('click', pullFromGitHub);
+
+// Placeholder for fields (you can add back your original fields later)
+function loadFields() {
+  document.getElementById('fields-container').innerHTML = '<p>Fields coming soon...</p>';
+}
