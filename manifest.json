@@ -1,7 +1,7 @@
 // manifest.json
 {
     "name": "Mazdoori Calculator App",
-    "short_name": "Mazdoori Calc",
+    "short_name": "Mazdoori Calculator",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1e3a8a",
