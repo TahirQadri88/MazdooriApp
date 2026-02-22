@@ -738,58 +738,63 @@ function ExportSection({ filteredLogs, categories, range, displayString, showToa
         </button>
       </div>
       
-      {/* PERFECTED HD EXPORT FRAME (Fixed Size, Prevent Cut-off) */}
-      <div id="hd-export-node" className="bg-white text-slate-900 p-12 flex-col fixed top-0 left-[-9999px]" style={{ display: 'none', width: '1080px', height: '1350px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
-        <div className="flex justify-between items-start border-b-[10px] border-blue-700 pb-8 mb-8 shrink-0">
+      {/* PERFECTED HD EXPORT FRAME (Fixed Size, Compacted to prevent Cut-off) */}
+      <div id="hd-export-node" className="bg-white text-slate-900 p-10 flex-col justify-between fixed top-0 left-[-9999px]" style={{ display: 'none', width: '1080px', height: '1350px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
+        
+        {/* HEADER */}
+        <div className="flex justify-between items-start border-b-[8px] border-blue-700 pb-6 shrink-0">
             <div>
-                <h1 className="text-7xl font-black text-blue-700 uppercase tracking-tighter leading-none">KHYBER TRADERS</h1>
-                <p className="text-3xl font-bold text-slate-400 uppercase mt-4 tracking-[0.3em]">Mazdoori Report Summary</p>
+                <h1 className="text-6xl font-black text-blue-700 uppercase tracking-tighter leading-none">KHYBER TRADERS</h1>
+                <p className="text-2xl font-bold text-slate-400 uppercase mt-3 tracking-[0.3em]">Mazdoori Report Summary</p>
             </div>
             <div className="text-right">
-                <div className="text-2xl font-black text-slate-300 uppercase tracking-widest">Date Range</div>
-                <div className="text-3xl font-black text-blue-700 mt-2">{displayString}</div>
+                <div className="text-xl font-black text-slate-300 uppercase tracking-widest">Date Range</div>
+                <div className="text-2xl font-black text-blue-700 mt-1">{displayString}</div>
             </div>
         </div>
 
-        {/* Scaled Table wrapper so items fit without overflowing */}
-        <div className="flex-1 bg-slate-50 rounded-[3rem] p-10 border-4 border-slate-100 overflow-hidden flex flex-col justify-start">
-          <table className="w-full text-3xl">
+        {/* TABLE WRAPPER - More compact rows */}
+        <div className="flex-1 my-6 bg-slate-50 rounded-[2.5rem] p-8 border-4 border-slate-100 overflow-hidden flex flex-col justify-start">
+          <table className="w-full text-[22px]">
             <thead className="text-slate-400 border-b-4 border-slate-200 uppercase tracking-[0.1em] font-black">
-                <tr><th className="pb-6 text-left">Item Name</th><th className="pb-6 text-center">Qty</th><th className="pb-6 text-right">Total Rs.</th></tr>
+                <tr><th className="pb-4 text-left">Item Name</th><th className="pb-4 text-center">Qty</th><th className="pb-4 text-right">Total Rs.</th></tr>
             </thead>
-            <tbody className="divide-y-4 divide-slate-100">
+            <tbody className="divide-y-2 divide-slate-100">
               {items.map(a => (
                 <tr key={a.id}>
-                    <td className="py-4 font-black text-slate-800 uppercase">{a.name}</td>
-                    <td className="py-4 text-center font-bold text-slate-400">{a.qty}</td>
-                    <td className="py-4 text-right font-black text-blue-700">Rs.{a.total.toLocaleString()}</td>
+                    <td className="py-2.5 font-black text-slate-800 uppercase leading-tight">{a.name}</td>
+                    <td className="py-2.5 text-center font-bold text-slate-400">{a.qty}</td>
+                    <td className="py-2.5 text-right font-black text-blue-700">Rs.{a.total.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Subtotal & Suzuki Breakdowns */}
-        <div className="mt-8 grid grid-cols-2 gap-6 shrink-0">
-            <div className="bg-slate-100 p-8 rounded-[2rem] flex justify-between items-center">
-                <span className="text-2xl font-black text-slate-500 uppercase tracking-widest">Subtotal (Lab+Tpt)</span>
-                <span className="text-4xl font-black text-indigo-700">Rs.{labTransTotal.toLocaleString()}</span>
+        {/* FOOTER - Grouped tightly */}
+        <div className="shrink-0 space-y-5">
+            {/* Subtotal & Suzuki Breakdowns */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-100 p-6 rounded-[1.5rem] flex justify-between items-center">
+                    <span className="text-xl font-black text-slate-500 uppercase tracking-widest">Subtotal (Lab+Tpt)</span>
+                    <span className="text-3xl font-black text-indigo-700">Rs.{labTransTotal.toLocaleString()}</span>
+                </div>
+                <div className="bg-slate-100 p-6 rounded-[1.5rem] flex justify-between items-center">
+                    <span className="text-xl font-black text-slate-500 uppercase tracking-widest">Suzuki Freight</span>
+                    <span className="text-3xl font-black text-amber-600">Rs.{suzukiTotal.toLocaleString()}</span>
+                </div>
             </div>
-            <div className="bg-slate-100 p-8 rounded-[2rem] flex justify-between items-center">
-                <span className="text-2xl font-black text-slate-500 uppercase tracking-widest">Suzuki Freight</span>
-                <span className="text-4xl font-black text-amber-600">Rs.{suzukiTotal.toLocaleString()}</span>
+
+            {/* Grand Total */}
+            <div className="bg-blue-700 p-8 rounded-[2rem] flex justify-between items-center shadow-2xl">
+              <div className="text-[2.5rem] font-black uppercase text-white tracking-widest">Grand Total</div>
+              <div className="text-[6rem] font-black text-white leading-none">Rs.{grand.toLocaleString()}</div>
             </div>
-        </div>
 
-        {/* Grand Total */}
-        <div className="mt-6 bg-blue-700 p-12 rounded-[3rem] flex justify-between items-center shadow-2xl shrink-0">
-          <div className="text-6xl font-black uppercase text-white tracking-widest">Grand Total</div>
-          <div className="text-[8rem] font-black text-white leading-none">Rs.{grand.toLocaleString()}</div>
-        </div>
-
-        <div className="mt-8 flex justify-between items-center px-10 shrink-0">
-            <div className="text-2xl font-black text-slate-300 uppercase tracking-[0.4em]">Mazdoori Calculator App</div>
-            <div className="text-2xl font-black text-blue-400 uppercase tracking-widest">Dev: Muhammad Tahir Qadri</div>
+            <div className="flex justify-between items-center px-4 pt-1">
+                <div className="text-lg font-black text-slate-300 uppercase tracking-[0.4em]">Mazdoori Calculator App</div>
+                <div className="text-lg font-black text-blue-400 uppercase tracking-widest">Dev: Muhammad Tahir Qadri</div>
+            </div>
         </div>
       </div>
     </div>
