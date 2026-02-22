@@ -28,7 +28,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "khyber-traders-final-v1"; // Root path for your business data
+const appId = "khyber-traders-final-v1"; 
 
 const DEFAULT_CATEGORIES = [
   { id: '1', name: "1st floor carton", group: "Labour", rate: 18, order: 0 },
@@ -91,6 +91,14 @@ export default function App() {
     signInAnonymously(auth).catch(err => console.error("Cloud Auth Error:", err));
     onAuthStateChanged(auth, setUser);
 
+    // Correctly handle PWA registration for GitHub Pages subfolder
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swPath = process.env.PUBLIC_URL + '/sw.js';
+        navigator.serviceWorker.register(swPath).catch(() => {});
+      });
+    }
+
     const handler = (e) => {
       e.preventDefault();
       setPrompt(e);
@@ -152,7 +160,7 @@ export default function App() {
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-blue-400">
       <RefreshCw className="animate-spin mb-4" size={40} />
-      <span className="text-[10px] font-black tracking-[0.3em] uppercase">Syncing Khyber Cloud...</span>
+      <span className="text-[10px] font-black tracking-[0.3em] uppercase">Connecting to Khyber Cloud...</span>
     </div>
   );
 
@@ -259,7 +267,7 @@ function ReportsView({ logs, categories, payments, showToast }) {
 
   const filteredLogs = logs.filter(l => l.date >= range.start && l.date <= range.end);
   const filteredPays = payments.filter(p => p.date >= range.start && p.date <= range.end);
-  const displayString = `Report (${fmtDate(range.start)} to ${fmtDate(range.end)})`;
+  const displayString = `Report (${fmtDate(range.start)} - ${fmtDate(range.end)})`;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -300,7 +308,7 @@ function SummarySection({ filteredLogs, categories }) {
       <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex justify-between items-center shadow-lg"><span className="text-xs font-bold text-slate-500">LABOUR TOTAL</span><span className="text-xl font-black text-blue-400">Rs.{totals.lab.toLocaleString()}</span></div>
       <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex justify-between items-center shadow-lg"><span className="text-xs font-bold text-slate-500">TRANSPORT TOTAL</span><span className="text-xl font-black text-purple-400">Rs.{totals.trans.toLocaleString()}</span></div>
       <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex justify-between items-center shadow-lg"><span className="text-xs font-bold text-slate-500">SUZUKI FREIGHT</span><span className="text-xl font-black text-amber-400">Rs.{totals.suz.toLocaleString()}</span></div>
-      <div className="bg-gradient-to-br from-emerald-900 to-teal-900 rounded-2xl p-6 shadow-xl"><h3 className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Combined Grand Total</h3><div className="text-4xl font-black text-white">Rs.{totals.grand.toLocaleString()}</div></div>
+      <div className="bg-emerald-950/20 p-6 rounded-3xl border border-emerald-500/30 flex justify-between items-center shadow-xl"><h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Combined Total</h3><div className="text-4xl font-black text-white">Rs.{totals.grand.toLocaleString()}</div></div>
     </div>
   );
 }
@@ -312,7 +320,7 @@ function LedgerSection({ filteredLogs, categories }) {
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto shadow-2xl">
       <table className="w-full text-left text-[10px] whitespace-nowrap">
         <thead className="bg-slate-950 text-slate-600 font-black uppercase">
-          <tr><th className="p-4 border-r border-slate-800">Date</th>{active.map(c => <th key={c.id} className="p-4 text-center border-r border-slate-800">{c.name}</th>)}<th className="p-4 text-right">Day Total</th></tr>
+          <tr><th className="p-4 border-r border-slate-800">Date</th>{active.map(c => <th key={c.id} className="p-4 text-center border-r border-slate-800">{c.name}</th>)}<th className="p-4 text-right">Total</th></tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50">
           {dates.map(d => (
@@ -378,7 +386,7 @@ function ExportSection({ filteredLogs, categories, range, displayString, showToa
   const download = async () => {
     if (!items.length) return;
     setWorking(true);
-    showToast("Baking HD 4:5 Post...");
+    showToast("Baking HD 4:5 Image...");
     const h2c = await loadHtml2Canvas();
     const node = document.getElementById('hd-export-node');
     node.style.display = 'flex';
@@ -410,7 +418,7 @@ function ExportSection({ filteredLogs, categories, range, displayString, showToa
       <div id="hd-export-node" className="bg-[#020617] text-white p-16 flex-col absolute left-[-9999px]" style={{ display: 'none', width: '1080px', height: '1350px', fontFamily: 'sans-serif' }}>
         <h1 className="text-8xl font-black text-blue-400 border-b-8 border-blue-600 pb-10 mb-10 uppercase tracking-tighter">KHYBER TRADERS</h1>
         <div className="text-4xl text-slate-500 font-bold mb-10 flex justify-between items-center uppercase tracking-widest">
-          <span>Report Summary</span><span>{displayString}</span>
+          <span>Mazdoori Report</span><span>{displayString}</span>
         </div>
         <div className="flex-1 bg-slate-900/50 rounded-[3rem] p-12 border-4 border-slate-800">
           <table className="w-full text-4xl">
@@ -430,10 +438,7 @@ function ExportSection({ filteredLogs, categories, range, displayString, showToa
   );
 }
 
-// ==========================================
-// 4. ADMIN VIEW (With Sync & Backup)
-// ==========================================
-function AdminView({ categories, logs, payments, showToast }) {
+function AdminView({ categories, showToast, logs, payments }) {
   const [n, setN] = useState('');
   const [g, setG] = useState('Labour');
   const [r, setR] = useState('');
@@ -498,8 +503,8 @@ function AdminView({ categories, logs, payments, showToast }) {
       </div>
 
       <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-500/20 shadow-lg flex gap-2">
-         <button onClick={exportJSON} className="flex-1 bg-slate-900 py-3 rounded-xl border border-emerald-500/30 text-xs font-bold flex justify-center items-center gap-2"><DownloadCloud size={16}/> Export JSON</button>
-         <label className="flex-1 bg-slate-900 py-3 rounded-xl border border-blue-500/30 text-xs font-bold flex justify-center items-center gap-2 cursor-pointer"><UploadCloud size={16}/> Import JSON<input type="file" onChange={importJSON} className="hidden" /></label>
+         <button onClick={exportJSON} className="flex-1 bg-slate-900 py-3 rounded-xl border border-emerald-500/30 text-xs font-bold flex justify-center items-center gap-2"><DownloadCloud size={16}/> Export Backup</button>
+         <label className="flex-1 bg-slate-900 py-3 rounded-xl border border-blue-500/30 text-xs font-bold flex justify-center items-center gap-2 cursor-pointer"><UploadCloud size={16}/> Import Backup<input type="file" onChange={importJSON} className="hidden" /></label>
       </div>
 
       <div className="space-y-2">
@@ -512,16 +517,13 @@ function AdminView({ categories, logs, payments, showToast }) {
             <div className="flex-1 space-y-2 min-w-0">
               <input value={c.name} onChange={e => edit(c.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-slate-800 focus:border-blue-500 outline-none font-bold text-white text-sm" />
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-500 uppercase">{c.group}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">{c.group}</span>
                 <input type="number" value={c.rate} onChange={e => edit(c.id, 'rate', e.target.value)} className="w-20 bg-slate-950 p-1 rounded text-right font-bold text-amber-400 text-xs" />
               </div>
             </div>
             <button onClick={async () => { if(window.confirm(`Delete ${c.name}?`)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id)); }} className="text-red-500/20 hover:text-red-500 p-2"><Trash2 size={20}/></button>
           </div>
         ))}
-        <div className="pt-8 px-2">
-           <button onClick={() => { if(window.confirm('WIPE ALL SHARED CLOUD DATA?')) { showToast('Resetting...'); } }} className="w-full border border-red-500/20 text-red-500/40 font-black py-4 rounded-xl text-[10px] uppercase tracking-widest">Factory Reset App</button>
-        </div>
       </div>
     </div>
   );
