@@ -1,22 +1,22 @@
 {
-    "name": "Mazdoori Calculator App",
-    "short_name": "Mazdoori Calculator",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#1e3a8a",
-    "theme_color": "#1e3a8a",
-    "orientation": "portrait-primary",
-    "icons": [
-        {
-            "src": "icon-192.png",
-            "type": "image/png",
-            "sizes": "192x192"
-        },
-        {
-            "src": "icon-512.png",
-            "type": "image/png",
-            "sizes": "512x512"
-        }
-    ]
+  "short_name": "Mazdoori",
+  "name": "Khyber Traders Mazdoori App",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/MazdooriApp/",
+  "scope": "/MazdooriApp/",
+  "display": "standalone",
+  "theme_color": "#1e3a8a",
+  "background_color": "#020617"
 }
 
