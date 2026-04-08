@@ -914,6 +914,17 @@ function AdminView({ categories, showToast, logs, payments, adminPass }) {
     reader.readAsText(file);
   };
 
+  const restoreDefaults = async () => {
+    if (!window.confirm("This will delete all current categories and restore the original 15 default categories. Your historical log data will be reconnected. Continue?")) return;
+    const batch = writeBatch(db);
+    // Delete all current categories (wrong-ID ones added after accidental delete)
+    categories.forEach(c => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id)));
+    // Re-write all DEFAULT_CATEGORIES with their original IDs (1-15)
+    DEFAULT_CATEGORIES.forEach(c => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id), c));
+    await batch.commit();
+    showToast("Default Categories Restored — Historical Data Reconnected!");
+  };
+
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
       
@@ -926,6 +937,13 @@ function AdminView({ categories, showToast, logs, payments, adminPass }) {
           <input type="number" placeholder="Rate" value={r} onChange={e=>setR(e.target.value)} className="w-24 bg-slate-50 border-2 border-slate-100 p-3 rounded-xl text-blue-700 font-black text-center outline-none" />
         </div>
         <button onClick={add} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest">Add Global Category</button>
+      </div>
+
+      {/* RESTORE DEFAULT CATEGORIES */}
+      <div className="bg-amber-50 p-5 rounded-3xl border-2 border-amber-200 space-y-3 shadow-sm">
+        <h3 className="font-black text-amber-700 uppercase text-[10px] tracking-[0.2em] flex items-center gap-2"><RefreshCw size={14}/> Recover Historical Data</h3>
+        <p className="text-[10px] text-amber-600 font-bold leading-relaxed">If old data is missing, tap below to restore original category IDs (1–15). All previous logs will reconnect instantly.</p>
+        <button onClick={restoreDefaults} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Restore Default Categories</button>
       </div>
 
       {/* BACKUP MANAGER */}
