@@ -102,6 +102,15 @@ const getDatePresets = () => {
   };
 };
 
+// Resolves category info from live list, or falls back to snapshot stored in the log itself.
+// This ensures past records survive even if a category is deleted or renamed.
+const resolveCat = (log, categories) => {
+  const live = categories.find(c => c.id === log.categoryId);
+  if (live) return live;
+  if (log.categoryName) return { id: log.categoryId, name: log.categoryName, group: log.categoryGroup || 'Labour', order: 9999, rate: 0 };
+  return null;
+};
+
 // --- MAIN APPLICATION ---
 export default function App() {
   const [user, setUser] = useState(null);
@@ -115,6 +124,7 @@ export default function App() {
   const [categories, setCategories] = useState([]);
   const [logs, setLogs] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [backups, setBackups] = useState([]);
   
   // Admin Security
   const [adminPass, setAdminPass] = useState('1234');
@@ -161,7 +171,12 @@ export default function App() {
       }
     });
 
-    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); };
+    const unsubBackups = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'backups'), (s) => {
+      const data = s.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setBackups(data.sort((a, b) => b.timestamp - a.timestamp));
+    });
+
+    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); };
   }, [user]);
 
   const saveDaily = async (date, qtyMap) => {
@@ -176,7 +191,9 @@ export default function App() {
       if (q > 0 && cat) {
         const docId = `${date}_${cid}`;
         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'logs', docId), {
-          date, categoryId: cid, qty: q, total: q * cat.rate
+          date, categoryId: cid,
+          categoryName: cat.name, categoryGroup: cat.group,
+          qty: q, total: q * cat.rate
         });
       }
     });
@@ -231,7 +248,7 @@ export default function App() {
            <AdminAuthView correctPass={adminPass} onUnlock={() => setIsAdminUnlocked(true)} showToast={showToast} />
         )}
         {activeTab === 'admin' && isAdminUnlocked && (
-           <AdminView categories={categories} logs={logs} payments={payments} adminPass={adminPass} showToast={showToast} />
+           <AdminView categories={categories} logs={logs} payments={payments} adminPass={adminPass} showToast={showToast} backups={backups} />
         )}
       </main>
 
@@ -269,7 +286,7 @@ function HomeView({ logs, categories }) {
     let suzuki = 0;
 
     weekLogs.forEach(l => {
-      const c = categories.find(cat => cat.id === l.categoryId);
+      const c = resolveCat(l, categories);
       if (!c) return;
       if (c.group === 'Labour' || c.group === 'Transport') {
         labTrans += l.total;
@@ -433,7 +450,7 @@ function SummaryCards({ filteredLogs, categories }) {
   const totals = useMemo(() => {
     let labTrans = 0, suz = 0;
     filteredLogs.forEach(l => {
-      const c = categories.find(cat => cat.id === l.categoryId);
+      const c = resolveCat(l, categories);
       if (!c) return;
       if (c.group === 'Suzuki') suz += l.total;
       else labTrans += l.total; // Combines Labour + Transport
@@ -462,7 +479,16 @@ function SummaryCards({ filteredLogs, categories }) {
 function LedgerSection({ filteredLogs, categories, showToast, range }) {
   // Chronological sorting (oldest to newest)
   const dates = [...new Set(filteredLogs.map(l => l.date))].sort((a, b) => a.localeCompare(b));
-  const active = categories.filter(c => filteredLogs.some(l => l.categoryId === c.id));
+  // Build active list: live categories + ghost entries for deleted/changed ones
+  const activeCatIds = [...new Set(filteredLogs.map(l => l.categoryId))];
+  const active = activeCatIds.map(cid => {
+    const live = categories.find(c => c.id === cid);
+    if (live) return live;
+    const snap = filteredLogs.find(l => l.categoryId === cid && l.categoryName);
+    return snap
+      ? { id: cid, name: snap.categoryName, group: snap.categoryGroup || 'Labour', order: 9999, rate: 0 }
+      : { id: cid, name: `[${cid}]`, group: 'Labour', order: 9999, rate: 0 };
+  }).sort((a, b) => (a.order || 9999) - (b.order || 9999));
 
   // Deletion logic
   const deleteDay = async (date) => {
@@ -517,7 +543,7 @@ function LedgerSection({ filteredLogs, categories, showToast, range }) {
     });
 
     dayLogs.forEach(l => {
-        const grp = categories.find(c => c.id === l.categoryId)?.group;
+        const grp = resolveCat(l, categories)?.group;
         if (grp === 'Suzuki') daySuzuki += l.total;
         else dayLabTrans += l.total;
     });
@@ -558,7 +584,7 @@ function LedgerSection({ filteredLogs, categories, showToast, range }) {
       });
       
       dayLogs.forEach(l => {
-        const grp = categories.find(c => c.id === l.categoryId)?.group;
+        const grp = resolveCat(l, categories)?.group;
         if (grp === 'Labour') dayLab += l.total;
         else if (grp === 'Transport') dayTpt += l.total;
         else if (grp === 'Suzuki') daySuz += l.total;
@@ -688,11 +714,14 @@ function PaymentsSection({ filteredPays, showToast }) {
 function ExportSection({ filteredLogs, categories, range, displayString, showToast }) {
   const [working, setWorking] = useState(false);
   
-  const items = categories.map(c => {
-    const l = filteredLogs.filter(x => x.categoryId === c.id);
-    return l.length ? { ...c, qty: l.reduce((s, x) => s + x.qty, 0), total: l.reduce((s, x) => s + x.total, 0) } : null;
-  }).filter(Boolean);
-  
+  const activeCatIds = [...new Set(filteredLogs.map(l => l.categoryId))];
+  const items = activeCatIds.map(cid => {
+    const c = resolveCat(filteredLogs.find(l => l.categoryId === cid), categories);
+    if (!c) return null;
+    const l = filteredLogs.filter(x => x.categoryId === cid);
+    return { ...c, qty: l.reduce((s, x) => s + x.qty, 0), total: l.reduce((s, x) => s + x.total, 0) };
+  }).filter(Boolean).sort((a, b) => (a.order || 9999) - (b.order || 9999));
+
   const labTransTotal = items.filter(i => i.group !== 'Suzuki').reduce((s, x) => s + x.total, 0);
   const suzukiTotal = items.filter(i => i.group === 'Suzuki').reduce((s, x) => s + x.total, 0);
   const grand = labTransTotal + suzukiTotal;
@@ -843,7 +872,7 @@ function AdminAuthView({ correctPass, onUnlock, showToast }) {
 // ==========================================
 // 5. SECURE ADMIN VIEW
 // ==========================================
-function AdminView({ categories, showToast, logs, payments, adminPass }) {
+function AdminView({ categories, showToast, logs, payments, adminPass, backups }) {
   const [n, setN] = useState('');
   const [g, setG] = useState('Labour');
   const [r, setR] = useState('');
@@ -915,14 +944,42 @@ function AdminView({ categories, showToast, logs, payments, adminPass }) {
   };
 
   const restoreDefaults = async () => {
-    if (!window.confirm("This will delete all current categories and restore the original 15 default categories. Your historical log data will be reconnected. Continue?")) return;
+    if (!window.confirm("This restores the original 15 default categories (IDs 1–15). Any NEW categories you added (e.g. F.C 1ST FLOOR) will be KEPT. Historical data will reconnect. Continue?")) return;
     const batch = writeBatch(db);
-    // Delete all current categories (wrong-ID ones added after accidental delete)
-    categories.forEach(c => batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id)));
-    // Re-write all DEFAULT_CATEGORIES with their original IDs (1-15)
+    // Only overwrite the 15 default IDs — leave all other categories (e.g. custom ones) untouched
     DEFAULT_CATEGORIES.forEach(c => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id), c));
     await batch.commit();
     showToast("Default Categories Restored — Historical Data Reconnected!");
+  };
+
+  const createBackup = async () => {
+    const ts = Date.now();
+    const backupId = `backup_${ts}`;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'backups', backupId), {
+      createdAt: getLocalDateStr(),
+      timestamp: ts,
+      label: `Backup ${fmtDate(getLocalDateStr())}`,
+      categories,
+      logs,
+      payments
+    });
+    showToast("Cloud Backup Created!");
+  };
+
+  const restoreFromBackup = async (backup) => {
+    if (!window.confirm(`Restore from backup dated ${fmtDate(backup.createdAt)}?\n\nThis will overwrite ALL current categories, logs, and payments with the backup data.`)) return;
+    const batch = writeBatch(db);
+    if (backup.categories) backup.categories.forEach(c => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id), c));
+    if (backup.logs) backup.logs.forEach(l => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'logs', l.id), l));
+    if (backup.payments) backup.payments.forEach(p => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'payments', p.id), p));
+    await batch.commit();
+    showToast("Backup Restored to Cloud!");
+  };
+
+  const deleteBackup = async (backupId) => {
+    if (!window.confirm("Delete this backup permanently?")) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'backups', backupId));
+    showToast("Backup Deleted");
   };
 
   return (
@@ -946,10 +1003,36 @@ function AdminView({ categories, showToast, logs, payments, adminPass }) {
         <button onClick={restoreDefaults} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Restore Default Categories</button>
       </div>
 
-      {/* BACKUP MANAGER */}
+      {/* CLOUD BACKUP MANAGER */}
+      <div className="bg-white p-5 rounded-3xl border-2 border-emerald-100 space-y-4 shadow-sm">
+        <div className="flex justify-between items-center border-b-2 border-slate-50 pb-2">
+          <h3 className="font-black text-emerald-700 uppercase text-[10px] tracking-[0.2em] flex items-center gap-2"><UploadCloud size={14}/> Cloud Backups (Firestore)</h3>
+          <button onClick={createBackup} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black px-3 py-2 rounded-xl uppercase tracking-widest transition-all active:scale-95">+ Backup Now</button>
+        </div>
+        {backups.length === 0 ? (
+          <p className="text-[10px] text-slate-400 font-bold text-center py-2">No cloud backups yet. Tap "Backup Now" to create one.</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {backups.map(b => (
+              <div key={b.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div>
+                  <div className="text-[10px] font-black text-slate-800 uppercase">{fmtDate(b.createdAt)}</div>
+                  <div className="text-[9px] text-slate-400 font-bold">{b.categories?.length || 0} cats · {b.logs?.length || 0} logs · {b.payments?.length || 0} pays</div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => restoreFromBackup(b)} className="bg-blue-100 text-blue-700 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-blue-200 transition-colors">Restore</button>
+                  <button onClick={() => deleteBackup(b.id)} className="text-red-300 hover:text-red-600 transition-colors p-1"><Trash2 size={14}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* LOCAL JSON BACKUP */}
       <div className="grid grid-cols-2 gap-3">
-         <button onClick={exportJSON} className="bg-white py-4 rounded-2xl border-2 border-emerald-100 text-[10px] font-black text-emerald-700 flex justify-center items-center gap-2 uppercase tracking-widest shadow-sm"><DownloadCloud size={18}/> Export Data</button>
-         <label className="bg-white py-4 rounded-2xl border-2 border-blue-100 text-[10px] font-black text-blue-700 flex justify-center items-center gap-2 uppercase tracking-widest shadow-sm cursor-pointer"><UploadCloud size={18}/> Import Data<input type="file" onChange={importJSON} className="hidden" /></label>
+         <button onClick={exportJSON} className="bg-white py-4 rounded-2xl border-2 border-emerald-100 text-[10px] font-black text-emerald-700 flex justify-center items-center gap-2 uppercase tracking-widest shadow-sm"><DownloadCloud size={18}/> Export JSON</button>
+         <label className="bg-white py-4 rounded-2xl border-2 border-blue-100 text-[10px] font-black text-blue-700 flex justify-center items-center gap-2 uppercase tracking-widest shadow-sm cursor-pointer"><UploadCloud size={18}/> Import JSON<input type="file" onChange={importJSON} className="hidden" /></label>
       </div>
 
       {/* LIST OF ITEMS WITH MOVE/DELETE/EDIT */}
