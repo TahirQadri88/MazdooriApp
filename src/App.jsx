@@ -488,7 +488,13 @@ function LedgerSection({ filteredLogs, categories, showToast, range }) {
     return snap
       ? { id: cid, name: snap.categoryName, group: snap.categoryGroup || 'Labour', order: 9999, rate: 0 }
       : { id: cid, name: `[${cid}]`, group: 'Labour', order: 9999, rate: 0 };
-  }).sort((a, b) => (a.order || 9999) - (b.order || 9999));
+  }).sort((a, b) => {
+    const GROUP_ORDER = { Labour: 0, Transport: 1, Suzuki: 2 };
+    const ga = GROUP_ORDER[a.group] ?? 3;
+    const gb = GROUP_ORDER[b.group] ?? 3;
+    if (ga !== gb) return ga - gb;
+    return (a.order ?? 9999) - (b.order ?? 9999);
+  });
 
   // Deletion logic
   const deleteDay = async (date) => {
@@ -899,10 +905,12 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
     showToast("Added to Shared List");
   };
 
-  const move = async (index, dir) => {
+  const moveWithinGroup = async (grpCats, index, dir) => {
+    const a = grpCats[index];
+    const b = grpCats[index + dir];
     const batch = writeBatch(db);
-    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'categories', categories[index].id), { order: index + dir });
-    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'categories', categories[index+dir].id), { order: index });
+    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'categories', a.id), { order: b.order ?? 9999 });
+    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'categories', b.id), { order: a.order ?? 9999 });
     await batch.commit();
   };
 
@@ -1097,28 +1105,38 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
          <label className="bg-white py-4 rounded-2xl border-2 border-blue-100 text-[10px] font-black text-blue-700 flex justify-center items-center gap-2 uppercase tracking-widest shadow-sm cursor-pointer"><UploadCloud size={18}/> Import JSON<input type="file" onChange={importJSON} className="hidden" /></label>
       </div>
 
-      {/* LIST OF ITEMS WITH MOVE/DELETE/EDIT */}
-      <div className="space-y-2">
+      {/* LIST OF ITEMS GROUPED BY TYPE WITH MOVE/DELETE/EDIT */}
+      <div className="space-y-4">
         <h3 className="font-black text-slate-400 uppercase text-[10px] px-2 tracking-[0.2em]">Manage Cloud Items</h3>
-        {categories.map((c, i) => (
-          <div key={c.id} className="bg-white p-4 rounded-2xl border-2 border-slate-50 flex items-center gap-4 shadow-sm hover:border-blue-100 transition-colors">
-            <div className="flex flex-col gap-2 shrink-0">
-              <button onClick={() => move(i, -1)} disabled={i === 0} className="text-slate-300 hover:text-blue-600 disabled:opacity-10 transition-colors"><ArrowUp size={18}/></button>
-              <button onClick={() => move(i, 1)} disabled={i === categories.length - 1} className="text-slate-300 hover:text-blue-600 disabled:opacity-10 transition-colors"><ArrowDown size={18}/></button>
-            </div>
-            <div className="flex-1 space-y-2 min-w-0">
-              <input value={c.name} onChange={e => edit(c.id, 'name', e.target.value)} className="w-full bg-transparent border-b-2 border-slate-50 focus:border-blue-600 outline-none font-black text-slate-800 text-sm pb-1 uppercase" />
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{c.group}</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-black text-slate-400">Rate:</span>
-                  <input type="number" value={c.rate} onChange={e => edit(c.id, 'rate', e.target.value)} className="w-20 bg-slate-50 border-2 border-slate-100 p-1.5 rounded-lg text-right font-black text-blue-700 text-xs" />
+        {['Labour', 'Transport', 'Suzuki'].map(grpName => {
+          const grpCats = categories.filter(c => c.group === grpName).sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
+          if (grpCats.length === 0) return null;
+          const grpColors = { Labour: 'bg-blue-600', Transport: 'bg-indigo-600', Suzuki: 'bg-amber-500' };
+          return (
+            <div key={grpName} className="space-y-2">
+              <div className={`text-[9px] font-black text-white ${grpColors[grpName]} px-3 py-1.5 rounded-lg uppercase tracking-widest inline-block`}>{grpName}</div>
+              {grpCats.map((c, i) => (
+                <div key={c.id} className="bg-white p-4 rounded-2xl border-2 border-slate-50 flex items-center gap-4 shadow-sm hover:border-blue-100 transition-colors">
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button onClick={() => moveWithinGroup(grpCats, i, -1)} disabled={i === 0} className="text-slate-300 hover:text-blue-600 disabled:opacity-10 transition-colors"><ArrowUp size={18}/></button>
+                    <button onClick={() => moveWithinGroup(grpCats, i, 1)} disabled={i === grpCats.length - 1} className="text-slate-300 hover:text-blue-600 disabled:opacity-10 transition-colors"><ArrowDown size={18}/></button>
+                  </div>
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <input value={c.name} onChange={e => edit(c.id, 'name', e.target.value)} className="w-full bg-transparent border-b-2 border-slate-50 focus:border-blue-600 outline-none font-black text-slate-800 text-sm pb-1 uppercase" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{c.group}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-black text-slate-400">Rate:</span>
+                        <input type="number" value={c.rate} onChange={e => edit(c.id, 'rate', e.target.value)} className="w-20 bg-slate-50 border-2 border-slate-100 p-1.5 rounded-lg text-right font-black text-blue-700 text-xs" />
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={async () => { if(window.confirm(`Delete ${c.name} from cloud?`)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id)); }} className="text-red-200 hover:text-red-600 p-2 transition-colors"><Trash2 size={24}/></button>
                 </div>
-              </div>
+              ))}
             </div>
-            <button onClick={async () => { if(window.confirm(`Delete ${c.name} from cloud?`)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id)); }} className="text-red-200 hover:text-red-600 p-2 transition-colors"><Trash2 size={24}/></button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* SECURITY PASSWORD CONTROLS - FIXED AT BOTTOM */}
