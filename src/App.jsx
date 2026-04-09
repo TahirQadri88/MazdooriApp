@@ -876,6 +876,16 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
   const [n, setN] = useState('');
   const [g, setG] = useState('Labour');
   const [r, setR] = useState('');
+  const [orphanMap, setOrphanMap] = useState({});
+
+  // Logs with unknown categoryId AND no categoryName snapshot
+  const orphanedIds = useMemo(() => {
+    const ids = new Set();
+    logs.forEach(l => {
+      if (!categories.find(c => c.id === l.categoryId) && !l.categoryName) ids.add(l.categoryId);
+    });
+    return [...ids];
+  }, [logs, categories]);
   
   // Password Change State
   const [oldPass, setOldPass] = useState('');
@@ -952,6 +962,31 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
     showToast("Default Categories Restored — Historical Data Reconnected!");
   };
 
+  const fixOrphanedLogs = async () => {
+    const mappings = Object.entries(orphanMap).filter(([_, newId]) => newId);
+    if (mappings.length === 0) { showToast("Select a category for each row", "error"); return; }
+    if (!window.confirm(`Remap ${mappings.length} unknown ID(s)? All affected log entries will be updated.`)) return;
+
+    const batch = writeBatch(db);
+    let count = 0;
+    for (const [oldId, newId] of mappings) {
+      const targetCat = categories.find(c => c.id === newId);
+      if (!targetCat) continue;
+      logs.filter(l => l.categoryId === oldId && !l.categoryName).forEach(l => {
+        batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'logs', l.id));
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'logs', `${l.date}_${newId}`), {
+          date: l.date, categoryId: newId,
+          categoryName: targetCat.name, categoryGroup: targetCat.group,
+          qty: l.qty, total: l.qty * targetCat.rate
+        });
+        count++;
+      });
+    }
+    await batch.commit();
+    setOrphanMap({});
+    showToast(`Fixed ${count} log entries!`);
+  };
+
   const createBackup = async () => {
     const ts = Date.now();
     const backupId = `backup_${ts}`;
@@ -1002,6 +1037,33 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
         <p className="text-[10px] text-amber-600 font-bold leading-relaxed">If old data is missing, tap below to restore original category IDs (1–15). All previous logs will reconnect instantly.</p>
         <button onClick={restoreDefaults} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Restore Default Categories</button>
       </div>
+
+      {/* FIX ORPHANED LOGS */}
+      {orphanedIds.length > 0 && (
+        <div className="bg-red-50 p-5 rounded-3xl border-2 border-red-200 space-y-3 shadow-sm">
+          <h3 className="font-black text-red-700 uppercase text-[10px] tracking-[0.2em] flex items-center gap-2"><Info size={14}/> Fix Orphaned Logs ({orphanedIds.length} unknown {orphanedIds.length === 1 ? 'ID' : 'IDs'})</h3>
+          <p className="text-[10px] text-red-600 font-bold leading-relaxed">These entries have old timestamp IDs with no category name. Assign each to the correct category — logs will be remapped and names will be saved.</p>
+          <div className="space-y-2">
+            {orphanedIds.map(oldId => {
+              const cnt = logs.filter(l => l.categoryId === oldId && !l.categoryName).length;
+              return (
+                <div key={oldId} className="bg-white p-3 rounded-xl border border-red-100 space-y-1">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unknown ID · {cnt} {cnt === 1 ? 'entry' : 'entries'}</div>
+                  <select
+                    value={orphanMap[oldId] || ''}
+                    onChange={e => setOrphanMap(prev => ({ ...prev, [oldId]: e.target.value }))}
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-2 rounded-lg text-blue-700 font-black text-xs outline-none"
+                  >
+                    <option value="">— Select Correct Category —</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.group})</option>)}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={fixOrphanedLogs} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Fix Orphaned Logs</button>
+        </div>
+      )}
 
       {/* CLOUD BACKUP MANAGER */}
       <div className="bg-white p-5 rounded-3xl border-2 border-emerald-100 space-y-4 shadow-sm">
