@@ -1766,17 +1766,31 @@ function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
         ))}
       </div>
       {filtered.length === 0 && <div className="text-center py-10 text-slate-400 text-sm font-bold">No dispatches found</div>}
-      {filtered.map(d => <DispatchCard key={d.id} dispatch={d} isAdmin={isAdmin} showToast={showToast} />)}
+      {filtered.map(d => <DispatchCard key={d.id} dispatch={d} isAdmin={isAdmin} ridesUser={ridesUser} showToast={showToast} />)}
     </div>
   );
 }
 
 // Dispatch Card
-function DispatchCard({ dispatch: d, isAdmin, showToast }) {
+function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [codDone, setCodDone] = useState(d.codCollected);
   const m = RIDER_TYPE_META[d.riderType] || RIDER_TYPE_META.bike;
+
+  // Edit state (inline)
+  const [eParty, setEParty]     = useState(d.partyName);
+  const [eLoad, setELoad]       = useState(d.loadDescription || '');
+  const [eFare, setEFare]       = useState(d.finalFare?.toString() || '');
+  const [eCOD, setECOD]         = useState(d.codAmount?.toString() || '0');
+  const [eCODDone, setECODDone] = useState(d.codCollected);
+  const [eStatus, setEStatus]   = useState(d.status || 'sent');
+  const [eNotes, setENotes]     = useState(d.notes || '');
+  const [eDist, setEDist]       = useState(d.distanceKm?.toString() || '');
+  const [eRate, setERate]       = useState(d.ratePerKm?.toString() || '');
+
+  const canEdit = isAdmin || (ridesUser?.id === d.riderId && d.entryStatus === 'pending');
+  const canDelete = isAdmin || (ridesUser?.id === d.riderId && d.entryStatus === 'pending');
 
   const toggleCOD = async () => {
     if (!isAdmin) return;
@@ -1803,6 +1817,25 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
     showToast('Deleted');
   };
 
+  const saveEdit = async () => {
+    const dist = parseFloat(eDist) || 0;
+    const rate = parseFloat(eRate) || 0;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), {
+      partyName: eParty.trim(),
+      loadDescription: eLoad.trim(),
+      finalFare: parseFloat(eFare) || 0,
+      codAmount: parseFloat(eCOD) || 0,
+      codCollected: eCODDone,
+      status: eStatus,
+      notes: eNotes.trim(),
+      distanceKm: dist,
+      ratePerKm: rate,
+      suggestedFare: rate > 0 ? Math.round(dist * rate) : d.suggestedFare,
+    });
+    setEditing(false);
+    showToast('Trip updated');
+  };
+
   const share = () => {
     const rickInfo = d.riderType === 'rickshaw' ? ` (×${d.rickshawCount})` : '';
     const text =
@@ -1820,10 +1853,11 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
   };
 
   const statusColor = d.entryStatus === 'finalized' ? 'text-emerald-600' : d.entryStatus === 'rejected' ? 'text-red-500' : 'text-amber-600';
+  const inp = "w-full bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
 
   return (
     <div className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${m.border}`}>
-      <button onClick={() => setExpanded(!expanded)} className="w-full p-4 text-left">
+      <button onClick={() => { setExpanded(!expanded); setEditing(false); }} className="w-full p-4 text-left">
         <div className="flex justify-between items-start">
           <div className="flex items-start gap-3 min-w-0">
             <span className={`w-3 h-3 rounded-full mt-1 shrink-0 ${m.dot}`}></span>
@@ -1843,7 +1877,7 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
         </div>
       </button>
 
-      {expanded && (
+      {expanded && !editing && (
         <div className="px-4 pb-4 border-t-2 border-slate-50 pt-3 space-y-3">
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div><span className="font-black text-slate-400 uppercase tracking-widest block">From</span>
@@ -1868,6 +1902,11 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
             <button onClick={share} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
               <Share2 size={12}/> Share
             </button>
+            {canEdit && (
+              <button onClick={() => setEditing(true)} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
+                ✏️ Edit
+              </button>
+            )}
             {isAdmin && d.entryStatus === 'pending' && (
               <>
                 <button onClick={finalize} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
@@ -1883,11 +1922,67 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
                 <DollarSign size={12}/> {codDone ? 'Mark Pending' : 'Mark Collected'}
               </button>
             )}
-            {isAdmin && (
+            {canDelete && (
               <button onClick={remove} className="bg-red-50 text-red-400 border border-red-100 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
                 <Trash2 size={12}/> Delete
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {expanded && editing && (
+        <div className="px-4 pb-4 border-t-2 border-blue-100 pt-3 space-y-3 bg-blue-50/30">
+          <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Editing Trip</div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Party Name</label>
+            <input value={eParty} onChange={e=>setEParty(e.target.value)} className={inp} />
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Load Description</label>
+            <input value={eLoad} onChange={e=>setELoad(e.target.value)} className={inp} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Distance km</label>
+              <input type="number" value={eDist} onChange={e=>setEDist(e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rate/km</label>
+              <input type="number" value={eRate} onChange={e=>setERate(e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Final Fare</label>
+              <input type="number" value={eFare} onChange={e=>setEFare(e.target.value)} className={`${inp} text-blue-700 font-black`} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Amount</label>
+              <input type="number" value={eCOD} onChange={e=>setECOD(e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Status</label>
+              <button onClick={()=>setECODDone(!eCODDone)} className={`w-full py-2.5 rounded-xl border-2 font-black text-[9px] uppercase transition-all ${eCODDone ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                {eCODDone ? '✓ Collected' : '⏳ Pending'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Status</label>
+            <div className="flex gap-1">
+              {DISPATCH_STATUSES.map(s => (
+                <button key={s} onClick={()=>setEStatus(s)} className={`flex-1 py-2 text-[8px] font-black rounded-lg border capitalize transition-all ${eStatus===s ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{s}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Notes</label>
+            <input value={eNotes} onChange={e=>setENotes(e.target.value)} className={inp} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={saveEdit} className="flex-1 bg-blue-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">Save Changes</button>
+            <button onClick={()=>setEditing(false)} className="px-5 bg-slate-100 text-slate-600 font-black py-3 rounded-2xl text-[10px] uppercase">Cancel</button>
           </div>
         </div>
       )}
@@ -2109,11 +2204,12 @@ function ReportCost({ fin }) {
 
 // Rider Profiles Manager
 function RiderProfilesManager({ riders, dispatches, showToast }) {
-  const [name, setName] = useState('');
-  const [pin, setPin] = useState('');
-  const [type, setType] = useState('bike');
+  const [name, setName]     = useState('');
+  const [pin, setPin]       = useState('');
+  const [type, setType]     = useState('bike');
   const [isBykea, setIsBykea] = useState(false);
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone]   = useState('');
+  const [notes, setNotes]   = useState('');
 
   const addRider = async () => {
     if (!name.trim() || !pin.trim()) { showToast('Name and PIN required', 'error'); return; }
@@ -2121,22 +2217,10 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
     const roles = ['rider'];
     if (isBykea) roles.push('bykea_manager');
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id), {
-      name: name.trim(), pin: pin.trim(), type, roles, phone: phone.trim(), active: true
+      name: name.trim(), pin: pin.trim(), type, roles, phone: phone.trim(), notes: notes.trim(), active: true
     });
-    setName(''); setPin(''); setPhone(''); setIsBykea(false);
+    setName(''); setPin(''); setPhone(''); setNotes(''); setIsBykea(false);
     showToast('Rider added');
-  };
-
-  const removeRider = async (id) => {
-    if (!window.confirm('Remove this rider?')) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id));
-    showToast('Rider removed');
-  };
-
-  const updatePin = async (id, newPin) => {
-    if (!newPin.trim()) return;
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id), { pin: newPin.trim() });
-    showToast('PIN updated');
   };
 
   const inputCls = "w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
@@ -2145,53 +2229,125 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
     <div className="space-y-4 pb-10">
       {/* Add Rider */}
       <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 space-y-3 shadow-sm">
-        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Add Rider</h3>
-        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Rider Name" className={inputCls} />
+        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Add New Rider</h3>
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Full Name" className={inputCls} />
         <div className="grid grid-cols-2 gap-3">
           <input value={pin} onChange={e=>setPin(e.target.value)} placeholder="PIN (4-6 digits)" inputMode="numeric" maxLength={6} className={inputCls} />
-          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone (optional)" className={inputCls} />
+          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone number" className={inputCls} />
         </div>
+        <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes (e.g. rickshaw reg, area)" className={inputCls} />
         <div className="flex gap-2">
           <button onClick={() => setType('bike')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase ${type==='bike'?'bg-blue-600 border-blue-600 text-white':'bg-slate-50 border-slate-100 text-slate-500'}`}>🟢 Bike</button>
           <button onClick={() => setType('rickshaw')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase ${type==='rickshaw'?'bg-amber-500 border-amber-500 text-white':'bg-slate-50 border-slate-100 text-slate-500'}`}>🟡 Rickshaw</button>
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={isBykea} onChange={e=>setIsBykea(e.target.checked)} className="w-4 h-4 accent-blue-600" />
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Is Bykea Manager (can enter Bykea trips)</span>
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Is Bykea Manager</span>
         </label>
         <button onClick={addRider} className="w-full bg-blue-700 text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Add Rider</button>
       </div>
 
-      {/* Rider List */}
-      {riders.filter(r=>!r.roles.includes('admin')).map(r => {
-        const rDisps = dispatches.filter(d => d.riderId === r.id && d.entryStatus === 'finalized');
-        const [editPin, setEditPin] = useState('');
-        return (
-          <div key={r.id} className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-black text-slate-900 uppercase">{r.name}</div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  {r.type === 'bike' ? '🟢 Bike' : '🟡 Rickshaw'} {r.roles.includes('bykea_manager') ? '· Bykea Manager' : ''}
-                </div>
-                {r.phone && <div className="text-[9px] font-bold text-slate-400 mt-0.5">{r.phone}</div>}
-              </div>
-              <button onClick={() => removeRider(r.id)} className="text-red-300 hover:text-red-600 p-1"><Trash2 size={18}/></button>
+      {/* Rider List — each in its own component to allow useState */}
+      {riders.filter(r=>!r.roles.includes('admin')).map(r => (
+        <RiderProfileCard key={r.id} rider={r} dispatches={dispatches} showToast={showToast} />
+      ))}
+    </div>
+  );
+}
+
+function RiderProfileCard({ rider: r, dispatches, showToast }) {
+  const [editing, setEditing] = useState(false);
+  const [eName, setEName]     = useState(r.name);
+  const [ePin, setEPin]       = useState(r.pin);
+  const [ePhone, setEPhone]   = useState(r.phone || '');
+  const [eNotes, setENotes]   = useState(r.notes || '');
+  const [eType, setEType]     = useState(r.type || 'bike');
+  const [eBykea, setEBykea]   = useState(r.roles?.includes('bykea_manager') || false);
+
+  const rDisps = dispatches.filter(d => d.riderId === r.id && d.entryStatus === 'finalized');
+
+  const saveEdit = async () => {
+    if (!eName.trim()) { showToast('Name required', 'error'); return; }
+    const roles = ['rider'];
+    if (eBykea) roles.push('bykea_manager');
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', r.id), {
+      name: eName.trim(),
+      pin: ePin.trim(),
+      phone: ePhone.trim(),
+      notes: eNotes.trim(),
+      type: eType,
+      roles,
+    });
+    setEditing(false);
+    showToast('Profile updated');
+  };
+
+  const removeRider = async () => {
+    if (!window.confirm(`Remove ${r.name}?`)) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', r.id));
+    showToast('Rider removed');
+  };
+
+  const inp = "w-full bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+      {/* Header row */}
+      <div className="p-4 flex justify-between items-start">
+        <div>
+          <div className="font-black text-slate-900 uppercase">{r.name}</div>
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            {r.type === 'bike' ? '🟢 Bike' : '🟡 Rickshaw'}{r.roles?.includes('bykea_manager') ? ' · Bykea Manager' : ''}
+          </div>
+          {r.phone && <div className="text-[9px] font-bold text-blue-500 mt-0.5">{r.phone}</div>}
+          {r.notes && <div className="text-[9px] font-bold text-slate-400 mt-0.5 italic">{r.notes}</div>}
+        </div>
+        <div className="flex gap-1">
+          <button onClick={() => setEditing(!editing)} className="bg-blue-50 text-blue-600 border border-blue-100 p-2 rounded-xl text-[9px] font-black">✏️</button>
+          <button onClick={removeRider} className="text-red-300 hover:text-red-600 p-2 transition-colors"><Trash2 size={16}/></button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 px-4 pb-3 text-center">
+        <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Trips</div><div className="font-black text-slate-700">{rDisps.length}</div></div>
+        <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Freight</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div></div>
+        <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">COD</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.codAmount||0),0).toLocaleString()}</div></div>
+      </div>
+
+      {/* Edit form */}
+      {editing && (
+        <div className="px-4 pb-4 border-t-2 border-blue-100 pt-3 space-y-3 bg-blue-50/30">
+          <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Edit Profile</div>
+          <input value={eName} onChange={e=>setEName(e.target.value)} placeholder="Full Name" className={inp} />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">PIN</label>
+              <input value={ePin} onChange={e=>setEPin(e.target.value)} placeholder="PIN" inputMode="numeric" maxLength={6} className={inp} />
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Trips</div><div className="font-black text-slate-700">{rDisps.length}</div></div>
-              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Freight</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div></div>
-              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">COD</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.codAmount||0),0).toLocaleString()}</div></div>
-            </div>
-            <div className="flex gap-2">
-              <input value={editPin} onChange={e=>setEditPin(e.target.value)} placeholder="New PIN" inputMode="numeric" maxLength={6}
-                className="flex-1 bg-slate-50 border-2 border-slate-100 p-2 rounded-xl text-sm font-bold outline-none focus:border-blue-500" />
-              <button onClick={() => { updatePin(r.id, editPin); setEditPin(''); }}
-                className="bg-blue-100 text-blue-700 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-200">Update PIN</button>
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Phone</label>
+              <input value={ePhone} onChange={e=>setEPhone(e.target.value)} placeholder="Phone" className={inp} />
             </div>
           </div>
-        );
-      })}
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Notes (rickshaw reg, area etc.)</label>
+            <input value={eNotes} onChange={e=>setENotes(e.target.value)} placeholder="Notes" className={inp} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={()=>setEType('bike')} className={`flex-1 py-2 text-[9px] font-black rounded-xl border-2 uppercase ${eType==='bike'?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-200 text-slate-500'}`}>🟢 Bike</button>
+            <button onClick={()=>setEType('rickshaw')} className={`flex-1 py-2 text-[9px] font-black rounded-xl border-2 uppercase ${eType==='rickshaw'?'bg-amber-500 border-amber-500 text-white':'bg-white border-slate-200 text-slate-500'}`}>🟡 Rickshaw</button>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={eBykea} onChange={e=>setEBykea(e.target.checked)} className="w-4 h-4 accent-blue-600" />
+            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Bykea Manager</span>
+          </label>
+          <div className="flex gap-2">
+            <button onClick={saveEdit} className="flex-1 bg-blue-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95">Save</button>
+            <button onClick={()=>setEditing(false)} className="px-5 bg-slate-100 text-slate-600 font-black py-3 rounded-2xl text-[10px] uppercase">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
