@@ -1481,6 +1481,10 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
   const [status, setStatus]       = useState('sent');
   const [saving, setSaving]       = useState(false);
 
+  const bikeRate = dispatchSettings.bikeRate || 55;
+  const rickshawRate = dispatchSettings.rickshawRate || 55;
+  const [ratePerKm, setRatePerKm] = useState(bikeRate);
+
   // Auto-fill distance when from/toArea changes
   useEffect(() => {
     if (toArea && toArea !== '__custom__') {
@@ -1492,12 +1496,14 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
     }
   }, [from, toArea]);
 
+  // Sync ratePerKm with rider type changes (reset to global default)
+  useEffect(() => {
+    setRatePerKm(selRiderType === 'rickshaw' ? rickshawRate : bikeRate);
+  }, [selRiderType]);
+
   // Auto-suggest fare
-  const bikeRate = dispatchSettings.bikeRate || 55;
-  const rickshawRate = dispatchSettings.rickshawRate || 55;
-  const rate = selRiderType === 'rickshaw' ? rickshawRate : bikeRate;
   const km = parseFloat(distKm) || 0;
-  const suggested = selRiderType === 'bykea' ? null : Math.round(km * rate);
+  const suggested = selRiderType === 'bykea' ? null : Math.round(km * (parseFloat(ratePerKm) || 0));
 
   useEffect(() => {
     if (selRiderType !== 'bykea' && suggested !== null && !finalFare) {
@@ -1536,6 +1542,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
         rickshawCount: selRiderType === 'rickshaw' ? rickshawCount : 1,
         loadDescription: loadDesc.trim(),
         distanceKm: parseFloat(distKm) || 0,
+        ratePerKm: parseFloat(ratePerKm) || 0,
         suggestedFare: suggested || 0,
         farePerUnit: selRiderType === 'rickshaw' ? (parseFloat(farePerUnit) || 0) : (parseFloat(finalFare) || 0),
         finalFare: parseFloat(finalFare) || 0,
@@ -1660,10 +1667,14 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
         {/* Distance & Fare */}
         {selRiderType !== 'bykea' ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className={labelCls}>Distance (km)</label>
                 <input type="number" value={distKm} onChange={e => setDistKm(e.target.value)} placeholder="km" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Rate/km (Rs.)</label>
+                <input type="number" value={ratePerKm} onChange={e => setRatePerKm(e.target.value)} className={`${inputCls} text-amber-700 font-black`} />
               </div>
               <div>
                 <label className={labelCls}>Suggested Fare</label>
@@ -1841,6 +1852,8 @@ function DispatchCard({ dispatch: d, isAdmin, showToast }) {
               <span className="font-bold text-slate-700">{d.riderName}</span></div>
             <div><span className="font-black text-slate-400 uppercase tracking-widest block">Distance</span>
               <span className="font-bold text-slate-700">{d.distanceKm} km</span></div>
+            {d.ratePerKm > 0 && <div><span className="font-black text-slate-400 uppercase tracking-widest block">Rate/km</span>
+              <span className="font-bold text-slate-700">Rs.{d.ratePerKm}</span></div>}
             <div><span className="font-black text-slate-400 uppercase tracking-widest block">Status</span>
               <span className="font-bold text-slate-700 capitalize">{d.status}</span></div>
             {d.riderType === 'rickshaw' && <div><span className="font-black text-slate-400 uppercase tracking-widest block">Rickshaws</span>
