@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Home as HomeIcon, PlusSquare, FileText, Settings, Check, 
-  ArrowUp, ArrowDown, Trash2, Plus, 
-  Image as ImageIcon, Share2, RefreshCw, DownloadCloud, UploadCloud, Info, Lock, FileDown, CalendarDays
+import {
+  Home as HomeIcon, PlusSquare, FileText, Settings, Check,
+  ArrowUp, ArrowDown, Trash2, Plus,
+  Image as ImageIcon, Share2, RefreshCw, DownloadCloud, UploadCloud, Info, Lock, FileDown, CalendarDays,
+  Truck, User, MapPin, Package, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle,
+  DollarSign, Users, LogOut, Navigation, BarChart2, ClipboardList
 } from 'lucide-react';
 
 // Firebase Imports
@@ -47,6 +49,66 @@ const DEFAULT_CATEGORIES = [
   { id: '14', name: "HILTON", group: "Suzuki", rate: 4000, order: 13 },
   { id: '15', name: "HUB", group: "Suzuki", rate: 2500, order: 14 }
 ];
+
+// ==========================================
+// RIDES & DISPATCH MODULE — CONSTANTS
+// ==========================================
+const KARACHI_AREAS = [
+  { name: 'Saddar', fromShop: 2, fromWarehouse: 12 },
+  { name: 'Lyari', fromShop: 3, fromWarehouse: 14 },
+  { name: 'Garden / Soldier Bazar', fromShop: 2, fromWarehouse: 13 },
+  { name: 'Burns Road', fromShop: 1.5, fromWarehouse: 13 },
+  { name: 'Liaquatabad', fromShop: 7, fromWarehouse: 10 },
+  { name: 'Nazimabad', fromShop: 8, fromWarehouse: 11 },
+  { name: 'North Nazimabad', fromShop: 10, fromWarehouse: 12 },
+  { name: 'Federal B Area', fromShop: 12, fromWarehouse: 8 },
+  { name: 'Buffer Zone', fromShop: 13, fromWarehouse: 9 },
+  { name: 'Gulshan-e-Iqbal', fromShop: 14, fromWarehouse: 2 },
+  { name: 'Gulistan-e-Jauhar', fromShop: 17, fromWarehouse: 4 },
+  { name: 'Scheme 33', fromShop: 20, fromWarehouse: 6 },
+  { name: 'Safoora', fromShop: 21, fromWarehouse: 7 },
+  { name: 'Malir', fromShop: 22, fromWarehouse: 9 },
+  { name: 'Korangi', fromShop: 20, fromWarehouse: 10 },
+  { name: 'Landhi', fromShop: 25, fromWarehouse: 12 },
+  { name: 'Bin Qasim', fromShop: 28, fromWarehouse: 15 },
+  { name: 'Shah Faisal Colony', fromShop: 17, fromWarehouse: 8 },
+  { name: 'SITE Area', fromShop: 9, fromWarehouse: 18 },
+  { name: 'Orangi Town', fromShop: 13, fromWarehouse: 20 },
+  { name: 'Baldia Town', fromShop: 11, fromWarehouse: 22 },
+  { name: 'New Karachi', fromShop: 16, fromWarehouse: 15 },
+  { name: 'Surjani Town', fromShop: 21, fromWarehouse: 18 },
+  { name: 'North Karachi', fromShop: 17, fromWarehouse: 14 },
+  { name: 'Clifton', fromShop: 11, fromWarehouse: 18 },
+  { name: 'DHA Phase 1-4', fromShop: 14, fromWarehouse: 20 },
+  { name: 'DHA Phase 5-6', fromShop: 18, fromWarehouse: 22 },
+  { name: 'DHA Phase 7-8', fromShop: 23, fromWarehouse: 26 },
+  { name: 'Bahria Town', fromShop: 38, fromWarehouse: 38 },
+  { name: 'Hub', fromShop: 48, fromWarehouse: 50 },
+  { name: 'Superhighway Far', fromShop: 35, fromWarehouse: 32 },
+  { name: 'Thatta / Gharo', fromShop: 90, fromWarehouse: 88 },
+];
+
+const DISPATCH_ORIGINS = {
+  shop: { id: 'shop', label: 'Khyber Traders Shop', address: 'Katchi Gali, 2 Marriott Rd, near Denso Hall' },
+  warehouse: { id: 'warehouse', label: 'Al Hilal Warehouse', address: 'Near Al Hilal Society, Gulshan' },
+  custom: { id: 'custom', label: 'Custom Location', address: '' },
+};
+
+const DEFAULT_RIDERS = [
+  { id: 'tahir_admin', name: 'Tahir', pin: '7869', type: 'admin', roles: ['admin'], phone: '', active: true },
+  { id: 'meraj_001', name: 'Meraj Ali', pin: '1234', type: 'bike', roles: ['rider', 'bykea_manager'], phone: '', active: true },
+  { id: 'muzzammil_001', name: 'Muzzammil Sheikh', pin: '1234', type: 'bike', roles: ['rider'], phone: '', active: true },
+];
+
+const RIDER_TYPE_META = {
+  bike:    { label: 'Private Bike',    color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  rickshaw:{ label: 'Private Rickshaw',color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200',   dot: 'bg-amber-500'   },
+  bykea:   { label: 'Bykea / App',     color: 'text-blue-700',    bg: 'bg-blue-50',    border: 'border-blue-200',    dot: 'bg-blue-500'    },
+};
+
+const DISPATCH_STATUSES = ['sent', 'delivered', 'returned', 'partial'];
+const ENTRY_STATUSES    = ['pending', 'finalized', 'rejected'];
+const DEFAULT_DISPATCH_SETTINGS = { bikeRate: 55, rickshawRate: 55 };
 
 // --- HELPERS ---
 const loadHtml2Canvas = () => new Promise((resolve, reject) => {
@@ -125,7 +187,13 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [payments, setPayments] = useState([]);
   const [backups, setBackups] = useState([]);
-  
+
+  // Rides Module Data
+  const [riders, setRiders] = useState([]);
+  const [dispatches, setDispatches] = useState([]);
+  const [dispatchSettings, setDispatchSettings] = useState(DEFAULT_DISPATCH_SETTINGS);
+  const [ridesUser, setRidesUser] = useState(null); // { id, name, roles, type }
+
   // Admin Security
   const [adminPass, setAdminPass] = useState('1234');
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
@@ -176,7 +244,20 @@ export default function App() {
       setBackups(data.sort((a, b) => b.timestamp - a.timestamp));
     });
 
-    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); };
+    const unsubRiders = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'riders'), (s) => {
+      const data = s.docs.map(d => ({ ...d.data(), id: d.id }));
+      setRiders(data.length ? data : DEFAULT_RIDERS);
+    });
+
+    const unsubDispatches = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'dispatches'), (s) => {
+      setDispatches(s.docs.map(d => ({ ...d.data(), id: d.id })));
+    });
+
+    const unsubDispSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'dispatch'), (d) => {
+      if (d.exists()) setDispatchSettings({ ...DEFAULT_DISPATCH_SETTINGS, ...d.data() });
+    });
+
+    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); unsubRiders(); unsubDispatches(); unsubDispSettings(); };
   }, [user]);
 
   const saveDaily = async (date, qtyMap) => {
@@ -250,14 +331,23 @@ export default function App() {
         {activeTab === 'admin' && isAdminUnlocked && (
            <AdminView categories={categories} logs={logs} payments={payments} adminPass={adminPass} showToast={showToast} backups={backups} />
         )}
+        {activeTab === 'rides' && (
+          <RidesGate
+            ridesUser={ridesUser} setRidesUser={setRidesUser}
+            riders={riders} dispatches={dispatches}
+            dispatchSettings={dispatchSettings}
+            showToast={showToast}
+          />
+        )}
       </main>
 
       <nav className="fixed bottom-0 w-full bg-white border-t-2 border-slate-200 p-3 z-40 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
         <div className="max-w-md mx-auto flex justify-around">
-          <NavItem icon={<HomeIcon size={24} />} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
-          <NavItem icon={<PlusSquare size={24} />} label="Entry" active={activeTab === 'entry'} onClick={() => setActiveTab('entry')} />
-          <NavItem icon={<FileText size={24} />} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-          <NavItem icon={<Settings size={24} />} label="Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
+          <NavItem icon={<HomeIcon size={22} />} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
+          <NavItem icon={<PlusSquare size={22} />} label="Entry" active={activeTab === 'entry'} onClick={() => setActiveTab('entry')} />
+          <NavItem icon={<FileText size={22} />} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+          <NavItem icon={<Truck size={22} />} label="Rides" active={activeTab === 'rides'} onClick={() => setActiveTab('rides')} />
+          <NavItem icon={<Settings size={22} />} label="Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
         </div>
       </nav>
     </div>
@@ -1153,4 +1243,981 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
   );
 }
 
+// ==========================================
+// RIDES & DISPATCH MODULE
+// ==========================================
 
+// Gate: shows PIN login or authenticated rides view
+function RidesGate({ ridesUser, setRidesUser, riders, dispatches, dispatchSettings, showToast }) {
+  if (!ridesUser) {
+    return <RidesPinLogin riders={riders} onLogin={setRidesUser} showToast={showToast} />;
+  }
+  const isAdmin = ridesUser.roles.includes('admin');
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      <div className="flex justify-between items-center">
+        <div>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Logged in as</span>
+          <div className="font-black text-blue-700 uppercase text-sm">{ridesUser.name}</div>
+        </div>
+        <button onClick={() => setRidesUser(null)} className="flex items-center gap-1 text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest">
+          <LogOut size={12} /> Logout
+        </button>
+      </div>
+      {isAdmin
+        ? <AdminRidesView dispatches={dispatches} riders={riders} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+        : <RiderView dispatches={dispatches} riders={riders} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+      }
+    </div>
+  );
+}
+
+// PIN Login screen
+function RidesPinLogin({ riders, onLogin, showToast }) {
+  const [selected, setSelected] = useState(null);
+  const [pin, setPin] = useState('');
+
+  const check = () => {
+    if (!selected) return;
+    if (pin === selected.pin) {
+      onLogin(selected);
+      showToast(`Welcome, ${selected.name}`);
+    } else {
+      showToast('Wrong PIN', 'error');
+      setPin('');
+    }
+  };
+
+  if (!selected) {
+    return (
+      <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-300 mt-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Truck size={32} className="text-blue-700" />
+          </div>
+          <h2 className="font-black text-xl text-slate-900 uppercase">Rides & Dispatch</h2>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Select your name to continue</p>
+        </div>
+        <div className="space-y-2">
+          {riders.filter(r => r.active !== false).map(r => (
+            <button key={r.id} onClick={() => setSelected(r)}
+              className="w-full bg-white border-2 border-slate-100 hover:border-blue-400 p-4 rounded-2xl flex items-center gap-4 shadow-sm transition-all active:scale-95">
+              <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                <User size={20} className="text-blue-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-black text-slate-900 uppercase">{r.name}</div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  {r.roles.includes('admin') ? 'Admin' : r.roles.includes('bykea_manager') ? 'Rider + Bykea Manager' : 'Bike Rider'}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in slide-in-from-bottom-4 duration-300 bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm text-center space-y-6 mt-4">
+      <button onClick={() => { setSelected(null); setPin(''); }} className="text-[9px] font-black text-slate-400 uppercase tracking-widest">← Back</button>
+      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+        <Lock size={28} className="text-blue-700" />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-slate-900 uppercase">{selected.name}</h2>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Enter PIN</p>
+      </div>
+      <input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e => setPin(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && check()}
+        placeholder="••••"
+        className="w-full bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl text-center font-black text-3xl tracking-[0.5em] outline-none focus:border-blue-600 text-blue-700" />
+      <button onClick={check} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest">
+        Unlock
+      </button>
+    </div>
+  );
+}
+
+// Rider view: only their own trips
+function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
+  const [tab, setTab] = useState('new');
+  const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
+  const isBykea = ridesUser.roles.includes('bykea_manager');
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
+        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>New Trip</button>
+        {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
+        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
+      </div>
+      {tab === 'new' && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'bykea' && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
+    </div>
+  );
+}
+
+// Admin Rides view: full access
+function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
+  const [tab, setTab] = useState('dashboard');
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-x-auto hide-scrollbar">
+        <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex gap-1 shadow-sm min-w-max">
+          {[['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['reports','Reports'],['riders','Riders'],['settings','Settings']].map(([k,l]) => (
+            <button key={k} onClick={() => setTab(k)} className={`py-2 px-3 text-[9px] font-black rounded-xl uppercase tracking-widest whitespace-nowrap transition-all ${tab === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
+      {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
+      {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
+      {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} />}
+      {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
+      {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} showToast={showToast} />}
+    </div>
+  );
+}
+
+// Admin Dashboard with COD tracker
+function AdminDashboard({ dispatches, riders, showToast }) {
+  const today = getLocalDateStr();
+  const finalized = dispatches.filter(d => d.entryStatus === 'finalized');
+  const pending   = dispatches.filter(d => d.entryStatus === 'pending');
+  const todayAll  = dispatches.filter(d => d.date === today);
+
+  const totalCOD     = finalized.reduce((s, d) => s + (d.codAmount || 0), 0);
+  const collectedCOD = finalized.filter(d => d.codCollected).reduce((s, d) => s + (d.codAmount || 0), 0);
+  const pendingCOD   = totalCOD - collectedCOD;
+
+  const finalizeAll = async () => {
+    if (!window.confirm(`Finalize all ${pending.length} pending entries?`)) return;
+    const chunks = [];
+    for (let i = 0; i < pending.length; i += 400) chunks.push(pending.slice(i, i + 400));
+    for (const chunk of chunks) {
+      const batch = writeBatch(db);
+      chunk.forEach(d => batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { entryStatus: 'finalized', finalizedAt: Date.now() }));
+      await batch.commit();
+    }
+    showToast(`${pending.length} entries finalized!`);
+  };
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* COD Tracker */}
+      <div className="bg-white p-5 rounded-3xl border-2 border-blue-100 space-y-3 shadow-sm">
+        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><DollarSign size={14}/> COD Tracker (Finalized Only)</h3>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-slate-50 p-3 rounded-2xl text-center">
+            <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Out</div>
+            <div className="text-base font-black text-slate-700">Rs.{totalCOD.toLocaleString()}</div>
+          </div>
+          <div className="bg-emerald-50 p-3 rounded-2xl text-center">
+            <div className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Collected</div>
+            <div className="text-base font-black text-emerald-700">Rs.{collectedCOD.toLocaleString()}</div>
+          </div>
+          <div className="bg-red-50 p-3 rounded-2xl text-center">
+            <div className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-1">Pending</div>
+            <div className="text-base font-black text-red-600">Rs.{pendingCOD.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Today Summary */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-blue-50 p-4 rounded-2xl border-2 border-blue-100 text-center">
+          <div className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-1">Today's Trips</div>
+          <div className="text-3xl font-black text-blue-700">{todayAll.length}</div>
+        </div>
+        <div className="bg-amber-50 p-4 rounded-2xl border-2 border-amber-100 text-center">
+          <div className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</div>
+          <div className="text-3xl font-black text-amber-700">{pending.length}</div>
+        </div>
+      </div>
+
+      {pending.length > 0 && (
+        <button onClick={finalizeAll} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+          <CheckCircle size={18}/> Finalize All Pending ({pending.length})
+        </button>
+      )}
+
+      {/* Recent Pending */}
+      {pending.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Pending Review</h4>
+          {pending.slice(0, 5).map(d => <DispatchCard key={d.id} dispatch={d} isAdmin showToast={showToast} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dispatch Entry Form
+function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], showToast, onDone, isAdmin = false }) {
+  const today = getLocalDateStr();
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const [date, setDate]           = useState(today);
+  const [time, setTime]           = useState(timeStr);
+  const [from, setFrom]           = useState('shop');
+  const [fromCustom, setFromCustom] = useState('');
+  const [toArea, setToArea]       = useState('');
+  const [toCustom, setToCustom]   = useState('');
+  const [partyName, setPartyName] = useState('');
+  const [selRiderType, setSelRiderType] = useState(riderType === 'all' ? 'bike' : riderType);
+  const [riderId, setRiderId]     = useState(isAdmin ? '' : ridesUser.id);
+  const [rickshawCount, setRickshawCount] = useState(1);
+  const [loadDesc, setLoadDesc]   = useState('');
+  const [distKm, setDistKm]       = useState('');
+  const [finalFare, setFinalFare] = useState('');
+  const [farePerUnit, setFarePerUnit] = useState('');
+  const [codAmount, setCodAmount] = useState('0');
+  const [codCollected, setCodCollected] = useState(false);
+  const [notes, setNotes]         = useState('');
+  const [status, setStatus]       = useState('sent');
+  const [saving, setSaving]       = useState(false);
+
+  // Auto-fill distance when from/toArea changes
+  useEffect(() => {
+    if (toArea && toArea !== '__custom__') {
+      const area = KARACHI_AREAS.find(a => a.name === toArea);
+      if (area) {
+        const km = from === 'shop' ? area.fromShop : from === 'warehouse' ? area.fromWarehouse : '';
+        setDistKm(km.toString());
+      }
+    }
+  }, [from, toArea]);
+
+  // Auto-suggest fare
+  const bikeRate = dispatchSettings.bikeRate || 55;
+  const rickshawRate = dispatchSettings.rickshawRate || 55;
+  const rate = selRiderType === 'rickshaw' ? rickshawRate : bikeRate;
+  const km = parseFloat(distKm) || 0;
+  const suggested = selRiderType === 'bykea' ? null : Math.round(km * rate);
+
+  useEffect(() => {
+    if (selRiderType !== 'bykea' && suggested !== null && !finalFare) {
+      if (selRiderType === 'rickshaw') {
+        setFarePerUnit(suggested.toString());
+        setFinalFare((suggested * rickshawCount).toString());
+      } else {
+        setFinalFare(suggested.toString());
+      }
+    }
+  }, [suggested, selRiderType]);
+
+  useEffect(() => {
+    if (selRiderType === 'rickshaw') {
+      const pu = parseFloat(farePerUnit) || 0;
+      setFinalFare((pu * rickshawCount).toString());
+    }
+  }, [farePerUnit, rickshawCount]);
+
+  const save = async () => {
+    if (!partyName.trim()) { showToast('Enter party name', 'error'); return; }
+    if (!toArea) { showToast('Select delivery area', 'error'); return; }
+    if (isAdmin && !riderId) { showToast('Select a rider', 'error'); return; }
+    setSaving(true);
+    try {
+      const id = `disp_${Date.now()}`;
+      const resolvedRiderId = isAdmin ? riderId : ridesUser.id;
+      const resolvedRider = riders.find(r => r.id === resolvedRiderId) || ridesUser;
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', id), {
+        date, time, from, fromCustom,
+        toArea: toArea === '__custom__' ? toCustom : toArea,
+        partyName: partyName.trim(),
+        riderType: selRiderType,
+        riderId: resolvedRiderId,
+        riderName: resolvedRider.name,
+        rickshawCount: selRiderType === 'rickshaw' ? rickshawCount : 1,
+        loadDescription: loadDesc.trim(),
+        distanceKm: parseFloat(distKm) || 0,
+        suggestedFare: suggested || 0,
+        farePerUnit: selRiderType === 'rickshaw' ? (parseFloat(farePerUnit) || 0) : (parseFloat(finalFare) || 0),
+        finalFare: parseFloat(finalFare) || 0,
+        codAmount: parseFloat(codAmount) || 0,
+        codCollected,
+        notes: notes.trim(),
+        status,
+        entryStatus: isAdmin ? 'finalized' : 'pending',
+        createdBy: ridesUser.id,
+        createdAt: Date.now(),
+        finalizedAt: isAdmin ? Date.now() : null,
+      });
+      showToast(isAdmin ? 'Dispatch saved & finalized' : 'Trip submitted for review');
+      // Reset
+      setPartyName(''); setToArea(''); setToCustom(''); setLoadDesc('');
+      setDistKm(''); setFinalFare(''); setFarePerUnit(''); setCodAmount('0');
+      setCodCollected(false); setNotes(''); setStatus('sent');
+      onDone && onDone();
+    } catch (e) { showToast('Error saving', 'error'); }
+    setSaving(false);
+  };
+
+  const inputCls = "w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
+  const labelCls = "text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1";
+
+  return (
+    <div className="space-y-3 pb-20">
+      <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 space-y-4 shadow-sm">
+        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Navigation size={14}/> New Dispatch</h3>
+
+        {/* Date & Time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className={labelCls}>Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} /></div>
+          <div><label className={labelCls}>Time</label>
+            <input type="time" value={time} onChange={e => setTime(e.target.value)} className={inputCls} /></div>
+        </div>
+
+        {/* From */}
+        <div>
+          <label className={labelCls}>From</label>
+          <div className="flex gap-2">
+            {Object.values(DISPATCH_ORIGINS).map(o => (
+              <button key={o.id} onClick={() => setFrom(o.id)}
+                className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-wide transition-all ${from === o.id ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                {o.id === 'shop' ? 'Shop' : o.id === 'warehouse' ? 'Warehouse' : 'Custom'}
+              </button>
+            ))}
+          </div>
+          {from === 'custom' && <input className={`${inputCls} mt-2`} placeholder="Enter address..." value={fromCustom} onChange={e => setFromCustom(e.target.value)} />}
+        </div>
+
+        {/* To Area */}
+        <div>
+          <label className={labelCls}>To Area</label>
+          <select value={toArea} onChange={e => setToArea(e.target.value)} className={inputCls}>
+            <option value="">— Select Area —</option>
+            {KARACHI_AREAS.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+            <option value="__custom__">Custom (free text)</option>
+          </select>
+          {toArea === '__custom__' && <input className={`${inputCls} mt-2`} placeholder="Enter area..." value={toCustom} onChange={e => setToCustom(e.target.value)} />}
+        </div>
+
+        {/* Party Name */}
+        <div>
+          <label className={labelCls}>Party Name</label>
+          <input value={partyName} onChange={e => setPartyName(e.target.value)} placeholder="e.g. Haji Saleem" className={inputCls} />
+        </div>
+
+        {/* Rider Type */}
+        {(riderType === 'all' || isAdmin) && (
+          <div>
+            <label className={labelCls}>Rider Type</label>
+            <div className="flex gap-2">
+              {(['bike','bykea','rickshaw']).map(rt => {
+                const m = RIDER_TYPE_META[rt];
+                return (
+                  <button key={rt} onClick={() => setSelRiderType(rt)}
+                    className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-wide transition-all ${selRiderType === rt ? `${m.bg} ${m.border} ${m.color}` : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                    {rt === 'bike' ? '🟢 Bike' : rt === 'bykea' ? '🔵 Bykea' : '🟡 Rickshaw'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Rider selector (admin only) */}
+        {isAdmin && (
+          <div>
+            <label className={labelCls}>Rider</label>
+            <select value={riderId} onChange={e => setRiderId(e.target.value)} className={inputCls}>
+              <option value="">— Select Rider —</option>
+              {riders.filter(r => !r.roles.includes('admin')).map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Rickshaw count */}
+        {selRiderType === 'rickshaw' && (
+          <div>
+            <label className={labelCls}>Rickshaw Count</label>
+            <div className="flex gap-2">
+              {[1,2,3,4].map(n => (
+                <button key={n} onClick={() => setRickshawCount(n)}
+                  className={`flex-1 py-3 font-black text-sm rounded-xl border-2 transition-all ${rickshawCount === n ? 'bg-amber-500 border-amber-500 text-white' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                  {n}{n===4?'+':''}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Load Description */}
+        <div>
+          <label className={labelCls}>Load Description</label>
+          <input value={loadDesc} onChange={e => setLoadDesc(e.target.value)} placeholder="e.g. 3 boxes heavy gold" className={inputCls} />
+        </div>
+
+        {/* Distance & Fare */}
+        {selRiderType !== 'bykea' ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Distance (km)</label>
+                <input type="number" value={distKm} onChange={e => setDistKm(e.target.value)} placeholder="km" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Suggested Fare</label>
+                <div className="bg-slate-100 border-2 border-slate-200 p-3 rounded-xl font-black text-blue-700 text-sm">
+                  {suggested !== null ? `Rs.${suggested}` : '—'}
+                </div>
+              </div>
+            </div>
+            {selRiderType === 'rickshaw' && (
+              <div>
+                <label className={labelCls}>Fare per Rickshaw (Rs.)</label>
+                <input type="number" value={farePerUnit} onChange={e => setFarePerUnit(e.target.value)} className={inputCls} />
+              </div>
+            )}
+            <div>
+              <label className={labelCls}>Final Fare (Rs.) {selRiderType === 'rickshaw' ? `× ${rickshawCount} = Total` : ''}</label>
+              <input type="number" value={finalFare} onChange={e => setFinalFare(e.target.value)} className={`${inputCls} text-blue-700 font-black text-lg`} />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className={labelCls}>Bykea Fare Paid (Rs.)</label>
+            <input type="number" value={finalFare} onChange={e => setFinalFare(e.target.value)} placeholder="As per app" className={`${inputCls} text-blue-700 font-black`} />
+          </div>
+        )}
+
+        {/* COD */}
+        <div className="space-y-2">
+          <div>
+            <label className={labelCls}>COD Amount (Rs.)</label>
+            <input type="number" value={codAmount} onChange={e => setCodAmount(e.target.value)} className={inputCls} />
+          </div>
+          {parseFloat(codAmount) > 0 && (
+            <button onClick={() => setCodCollected(!codCollected)}
+              className={`w-full py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${codCollected ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+              COD: {codCollected ? '✓ Collected' : '⏳ Pending Collection'}
+            </button>
+          )}
+        </div>
+
+        {/* Status & Notes */}
+        <div>
+          <label className={labelCls}>Delivery Status</label>
+          <div className="flex gap-1">
+            {DISPATCH_STATUSES.map(s => (
+              <button key={s} onClick={() => setStatus(s)}
+                className={`flex-1 py-2 text-[9px] font-black rounded-lg border transition-all capitalize ${status === s ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Notes (optional)</label>
+          <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any additional info..." className={inputCls} />
+        </div>
+      </div>
+
+      <button onClick={save} disabled={saving}
+        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-5 rounded-[2rem] shadow-xl active:scale-95 transition-all tracking-widest uppercase text-base disabled:opacity-50">
+        {saving ? 'Saving...' : isAdmin ? 'Save & Finalize' : 'Submit for Review'}
+      </button>
+    </div>
+  );
+}
+
+// Dispatch List / History
+function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
+  const [filter, setFilter] = useState('all');
+  const today = getLocalDateStr();
+  const weekStart = getWeekRange().start;
+
+  const filtered = dispatches.filter(d => {
+    if (filter === 'today') return d.date === today;
+    if (filter === 'week') return d.date >= weekStart;
+    if (filter === 'cod') return d.codAmount > 0 && !d.codCollected && d.entryStatus === 'finalized';
+    return true;
+  });
+
+  return (
+    <div className="space-y-3 pb-10">
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+        {[['all','All'],['today','Today'],['week','This Week'],['cod','COD Pending']].map(([k,l]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className={`shrink-0 px-3 py-2 text-[9px] font-black uppercase rounded-lg border-2 transition-all ${filter === k ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 && <div className="text-center py-10 text-slate-400 text-sm font-bold">No dispatches found</div>}
+      {filtered.map(d => <DispatchCard key={d.id} dispatch={d} isAdmin={isAdmin} showToast={showToast} />)}
+    </div>
+  );
+}
+
+// Dispatch Card
+function DispatchCard({ dispatch: d, isAdmin, showToast }) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [codDone, setCodDone] = useState(d.codCollected);
+  const m = RIDER_TYPE_META[d.riderType] || RIDER_TYPE_META.bike;
+
+  const toggleCOD = async () => {
+    if (!isAdmin) return;
+    const next = !codDone;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { codCollected: next });
+    setCodDone(next);
+    showToast(next ? 'COD marked collected' : 'COD marked pending');
+  };
+
+  const finalize = async () => {
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { entryStatus: 'finalized', finalizedAt: Date.now() });
+    showToast('Entry finalized');
+  };
+
+  const reject = async () => {
+    if (!window.confirm('Reject this entry?')) return;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { entryStatus: 'rejected' });
+    showToast('Entry rejected');
+  };
+
+  const remove = async () => {
+    if (!window.confirm('Delete this dispatch permanently?')) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id));
+    showToast('Deleted');
+  };
+
+  const share = () => {
+    const rickInfo = d.riderType === 'rickshaw' ? ` (×${d.rickshawCount})` : '';
+    const text =
+`🛵 Dispatch — Khyber Traders
+📅 ${fmtDate(d.date)} — ${d.time || ''}
+👤 ${d.partyName} — ${d.toArea}
+🚐 ${m.label}${rickInfo}
+📦 ${d.loadDescription || '—'}
+📍 Distance: ${d.distanceKm} km
+💰 Fare: Rs.${(d.finalFare || 0).toLocaleString()}
+💵 COD: Rs.${(d.codAmount || 0).toLocaleString()} — ${d.codCollected ? 'COLLECTED' : 'PENDING'}
+📌 Status: ${(d.status||'').toUpperCase()}`;
+    if (navigator.share) navigator.share({ text });
+    else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
+  };
+
+  const statusColor = d.entryStatus === 'finalized' ? 'text-emerald-600' : d.entryStatus === 'rejected' ? 'text-red-500' : 'text-amber-600';
+
+  return (
+    <div className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${m.border}`}>
+      <button onClick={() => setExpanded(!expanded)} className="w-full p-4 text-left">
+        <div className="flex justify-between items-start">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className={`w-3 h-3 rounded-full mt-1 shrink-0 ${m.dot}`}></span>
+            <div className="min-w-0">
+              <div className="font-black text-slate-900 uppercase truncate">{d.partyName}</div>
+              <div className="text-[10px] font-bold text-slate-500 mt-0.5">{d.toArea} · {fmtDate(d.date)}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`text-[9px] font-black uppercase ${statusColor}`}>{d.entryStatus}</span>
+                {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
+              </div>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="font-black text-blue-700">Rs.{(d.finalFare||0).toLocaleString()}</div>
+            <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{m.label}</div>
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t-2 border-slate-50 pt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div><span className="font-black text-slate-400 uppercase tracking-widest block">From</span>
+              <span className="font-bold text-slate-700">{DISPATCH_ORIGINS[d.from]?.label || d.fromCustom || d.from}</span></div>
+            <div><span className="font-black text-slate-400 uppercase tracking-widest block">Rider</span>
+              <span className="font-bold text-slate-700">{d.riderName}</span></div>
+            <div><span className="font-black text-slate-400 uppercase tracking-widest block">Distance</span>
+              <span className="font-bold text-slate-700">{d.distanceKm} km</span></div>
+            <div><span className="font-black text-slate-400 uppercase tracking-widest block">Status</span>
+              <span className="font-bold text-slate-700 capitalize">{d.status}</span></div>
+            {d.riderType === 'rickshaw' && <div><span className="font-black text-slate-400 uppercase tracking-widest block">Rickshaws</span>
+              <span className="font-bold text-slate-700">{d.rickshawCount} × Rs.{d.farePerUnit}</span></div>}
+            {d.codAmount > 0 && <div><span className="font-black text-slate-400 uppercase tracking-widest block">COD</span>
+              <span className="font-bold text-slate-700">Rs.{d.codAmount?.toLocaleString()}</span></div>}
+          </div>
+          {d.loadDescription && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Load</span><span className="font-bold text-slate-700">{d.loadDescription}</span></div>}
+          {d.notes && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Notes</span><span className="font-bold text-slate-700">{d.notes}</span></div>}
+
+          <div className="flex gap-2 flex-wrap pt-1">
+            <button onClick={share} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
+              <Share2 size={12}/> Share
+            </button>
+            {isAdmin && d.entryStatus === 'pending' && (
+              <>
+                <button onClick={finalize} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
+                  <CheckCircle size={12}/> Finalize
+                </button>
+                <button onClick={reject} className="bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
+                  <XCircle size={12}/> Reject
+                </button>
+              </>
+            )}
+            {isAdmin && d.codAmount > 0 && (
+              <button onClick={toggleCOD} className={`border px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1 ${codDone ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                <DollarSign size={12}/> {codDone ? 'Mark Pending' : 'Mark Collected'}
+              </button>
+            )}
+            {isAdmin && (
+              <button onClick={remove} className="bg-red-50 text-red-400 border border-red-100 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
+                <Trash2 size={12}/> Delete
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Reports (7 types)
+function RidesReports({ dispatches, riders }) {
+  const [tab, setTab] = useState('summary');
+  const [range, setRange] = useState(getWeekRange());
+  const presets = getDatePresets();
+  const fin = dispatches.filter(d => d.entryStatus === 'finalized' && d.date >= range.start && d.date <= range.end);
+
+  const reportTabs = [
+    ['summary','Summary'], ['rider','Per Rider'], ['bykea','Bykea'],
+    ['area','By Area'], ['cod','COD Recovery'], ['cost','Cost Analysis'],
+  ];
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Date Filters */}
+      <div className="bg-white p-3 rounded-2xl border-2 border-slate-100 space-y-2 shadow-sm">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {Object.entries(presets).map(([l, v]) => (
+            <button key={l} onClick={() => setRange(v)}
+              className={`shrink-0 px-3 py-1.5 text-[9px] font-black uppercase rounded-lg border-2 transition-all flex items-center gap-1 ${range.start === v.start && range.end === v.end ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+              <CalendarDays size={10}/> {l}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1"><label className="text-[8px] font-black text-slate-400 uppercase ml-1">Start</label>
+            <input type="date" value={range.start} onChange={e => setRange({...range, start: e.target.value})} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg font-bold text-xs outline-none focus:border-blue-500" /></div>
+          <div className="flex-1"><label className="text-[8px] font-black text-slate-400 uppercase ml-1">End</label>
+            <input type="date" value={range.end} onChange={e => setRange({...range, end: e.target.value})} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg font-bold text-xs outline-none focus:border-blue-500" /></div>
+        </div>
+      </div>
+
+      {/* Tab nav */}
+      <div className="overflow-x-auto hide-scrollbar">
+        <div className="flex gap-1 min-w-max bg-white p-1 rounded-xl border-2 border-slate-100 shadow-sm">
+          {reportTabs.map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)}
+              className={`px-3 py-2 text-[9px] font-black rounded-lg uppercase tracking-widest whitespace-nowrap transition-all ${tab === k ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === 'summary'  && <ReportSummary fin={fin} />}
+      {tab === 'rider'    && <ReportPerRider fin={fin} riders={riders} />}
+      {tab === 'bykea'    && <ReportBykea fin={fin} />}
+      {tab === 'area'     && <ReportArea fin={fin} />}
+      {tab === 'cod'      && <ReportCOD fin={fin} riders={riders} />}
+      {tab === 'cost'     && <ReportCost fin={fin} />}
+    </div>
+  );
+}
+
+function StatRow({ label, value, sub }) {
+  return (
+    <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
+      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">{label}</span>
+      <div className="text-right"><span className="font-black text-slate-900">{value}</span>
+        {sub && <span className="text-[9px] font-bold text-slate-400 block">{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+function ReportCard({ title, children }) {
+  return (
+    <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 shadow-sm">
+      <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-2"><BarChart2 size={12}/> {title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function ReportSummary({ fin }) {
+  const totalFare = fin.reduce((s,d) => s + (d.finalFare||0), 0);
+  const bikes = fin.filter(d => d.riderType === 'bike');
+  const rickshaws = fin.filter(d => d.riderType === 'rickshaw');
+  const bykeas = fin.filter(d => d.riderType === 'bykea');
+  const totalCOD = fin.reduce((s,d) => s + (d.codAmount||0), 0);
+  const collectedCOD = fin.filter(d=>d.codCollected).reduce((s,d) => s+(d.codAmount||0),0);
+  return (
+    <div className="space-y-3">
+      <ReportCard title="Overall Summary">
+        <StatRow label="Total Rides" value={fin.length} />
+        <StatRow label="Total Freight" value={`Rs.${totalFare.toLocaleString()}`} />
+        <StatRow label="Bike Rides" value={bikes.length} sub={`Rs.${bikes.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}`} />
+        <StatRow label="Rickshaw Rides" value={rickshaws.length} sub={`Rs.${rickshaws.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}`} />
+        <StatRow label="Bykea/App Rides" value={bykeas.length} sub={`Rs.${bykeas.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}`} />
+        <StatRow label="Total COD Out" value={`Rs.${totalCOD.toLocaleString()}`} />
+        <StatRow label="COD Collected" value={`Rs.${collectedCOD.toLocaleString()}`} />
+        <StatRow label="COD Pending" value={`Rs.${(totalCOD-collectedCOD).toLocaleString()}`} />
+      </ReportCard>
+    </div>
+  );
+}
+
+function ReportPerRider({ fin, riders }) {
+  const riderIds = [...new Set(fin.map(d => d.riderId))];
+  return (
+    <div className="space-y-3">
+      {riderIds.map(rid => {
+        const riderDisps = fin.filter(d => d.riderId === rid);
+        const r = riders.find(x => x.id === rid);
+        const name = r?.name || riderDisps[0]?.riderName || rid;
+        const fare = riderDisps.reduce((s,d) => s+(d.finalFare||0), 0);
+        const cod = riderDisps.reduce((s,d) => s+(d.codAmount||0), 0);
+        const codCollected = riderDisps.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
+        const km = riderDisps.reduce((s,d) => s+(d.distanceKm||0), 0);
+        return (
+          <ReportCard key={rid} title={name}>
+            <StatRow label="Trips" value={riderDisps.length} />
+            <StatRow label="Total Distance" value={`${km.toFixed(1)} km`} />
+            <StatRow label="Total Freight" value={`Rs.${fare.toLocaleString()}`} />
+            <StatRow label="COD Carried" value={`Rs.${cod.toLocaleString()}`} />
+            <StatRow label="COD Collected" value={`Rs.${codCollected.toLocaleString()}`} />
+            <StatRow label="COD Pending" value={`Rs.${(cod-codCollected).toLocaleString()}`} />
+          </ReportCard>
+        );
+      })}
+      {riderIds.length === 0 && <p className="text-center text-slate-400 text-sm py-6">No finalized data for this period</p>}
+    </div>
+  );
+}
+
+function ReportBykea({ fin }) {
+  const bykeas = fin.filter(d => d.riderType === 'bykea');
+  const total = bykeas.reduce((s,d) => s+(d.finalFare||0), 0);
+  const areas = [...new Set(bykeas.map(d=>d.toArea))];
+  return (
+    <div className="space-y-3">
+      <ReportCard title="Bykea / App Report">
+        <StatRow label="Total Rides" value={bykeas.length} />
+        <StatRow label="Total Paid" value={`Rs.${total.toLocaleString()}`} />
+        <StatRow label="Areas Served" value={areas.length} />
+      </ReportCard>
+      {bykeas.length > 0 && (
+        <ReportCard title="Bykea Trips">
+          {bykeas.map(d => (
+            <div key={d.id} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
+              <div><div className="text-[10px] font-black text-slate-800 uppercase">{d.partyName}</div>
+                <div className="text-[9px] text-slate-400 font-bold">{d.toArea} · {fmtDate(d.date)}</div></div>
+              <span className="font-black text-blue-700 text-sm">Rs.{(d.finalFare||0).toLocaleString()}</span>
+            </div>
+          ))}
+        </ReportCard>
+      )}
+    </div>
+  );
+}
+
+function ReportArea({ fin }) {
+  const areaMap = {};
+  fin.forEach(d => {
+    const a = d.toArea || 'Unknown';
+    if (!areaMap[a]) areaMap[a] = { count: 0, fare: 0 };
+    areaMap[a].count++;
+    areaMap[a].fare += d.finalFare || 0;
+  });
+  const sorted = Object.entries(areaMap).sort((a,b) => b[1].count - a[1].count);
+  return (
+    <ReportCard title="Area-wise Report">
+      {sorted.length === 0 && <p className="text-slate-400 text-sm text-center py-4">No data</p>}
+      {sorted.map(([area, data]) => (
+        <StatRow key={area} label={area} value={`${data.count} trip${data.count>1?'s':''}`} sub={`Rs.${data.fare.toLocaleString()}`} />
+      ))}
+    </ReportCard>
+  );
+}
+
+function ReportCOD({ fin, riders }) {
+  const codEntries = fin.filter(d => d.codAmount > 0);
+  const riderIds = [...new Set(codEntries.map(d=>d.riderId))];
+  return (
+    <div className="space-y-3">
+      {riderIds.map(rid => {
+        const rDisps = codEntries.filter(d=>d.riderId===rid);
+        const r = riders.find(x=>x.id===rid);
+        const name = r?.name || rDisps[0]?.riderName || rid;
+        const total = rDisps.reduce((s,d)=>s+(d.codAmount||0),0);
+        const collected = rDisps.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
+        const pending = rDisps.filter(d=>!d.codCollected);
+        return (
+          <ReportCard key={rid} title={`COD — ${name}`}>
+            <StatRow label="Total Carried" value={`Rs.${total.toLocaleString()}`} />
+            <StatRow label="Collected" value={`Rs.${collected.toLocaleString()}`} />
+            <StatRow label="Outstanding" value={`Rs.${(total-collected).toLocaleString()}`} />
+            {pending.length > 0 && <div className="mt-2 text-[9px] font-black text-red-500 uppercase">{pending.length} pending trip{pending.length>1?'s':''}</div>}
+          </ReportCard>
+        );
+      })}
+      {riderIds.length === 0 && <p className="text-slate-400 text-sm text-center py-6">No COD entries for this period</p>}
+    </div>
+  );
+}
+
+function ReportCost({ fin }) {
+  const groups = { bike: fin.filter(d=>d.riderType==='bike'), rickshaw: fin.filter(d=>d.riderType==='rickshaw'), bykea: fin.filter(d=>d.riderType==='bykea') };
+  const cpk = (arr) => {
+    const totalKm = arr.reduce((s,d)=>s+(d.distanceKm||0),0);
+    const totalFare = arr.reduce((s,d)=>s+(d.finalFare||0),0);
+    return totalKm > 0 ? (totalFare/totalKm).toFixed(1) : '—';
+  };
+  return (
+    <ReportCard title="Cost Analysis — Rs. per km">
+      <StatRow label="Bike" value={`Rs.${cpk(groups.bike)}/km`} sub={`${groups.bike.length} trips`} />
+      <StatRow label="Rickshaw" value={`Rs.${cpk(groups.rickshaw)}/km`} sub={`${groups.rickshaw.length} trips`} />
+      <StatRow label="Bykea / App" value={`Rs.${cpk(groups.bykea)}/km`} sub={`${groups.bykea.length} trips`} />
+    </ReportCard>
+  );
+}
+
+// Rider Profiles Manager
+function RiderProfilesManager({ riders, dispatches, showToast }) {
+  const [name, setName] = useState('');
+  const [pin, setPin] = useState('');
+  const [type, setType] = useState('bike');
+  const [isBykea, setIsBykea] = useState(false);
+  const [phone, setPhone] = useState('');
+
+  const addRider = async () => {
+    if (!name.trim() || !pin.trim()) { showToast('Name and PIN required', 'error'); return; }
+    const id = `rider_${Date.now()}`;
+    const roles = ['rider'];
+    if (isBykea) roles.push('bykea_manager');
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id), {
+      name: name.trim(), pin: pin.trim(), type, roles, phone: phone.trim(), active: true
+    });
+    setName(''); setPin(''); setPhone(''); setIsBykea(false);
+    showToast('Rider added');
+  };
+
+  const removeRider = async (id) => {
+    if (!window.confirm('Remove this rider?')) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id));
+    showToast('Rider removed');
+  };
+
+  const updatePin = async (id, newPin) => {
+    if (!newPin.trim()) return;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', id), { pin: newPin.trim() });
+    showToast('PIN updated');
+  };
+
+  const inputCls = "w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Add Rider */}
+      <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 space-y-3 shadow-sm">
+        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Add Rider</h3>
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Rider Name" className={inputCls} />
+        <div className="grid grid-cols-2 gap-3">
+          <input value={pin} onChange={e=>setPin(e.target.value)} placeholder="PIN (4-6 digits)" inputMode="numeric" maxLength={6} className={inputCls} />
+          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone (optional)" className={inputCls} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setType('bike')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase ${type==='bike'?'bg-blue-600 border-blue-600 text-white':'bg-slate-50 border-slate-100 text-slate-500'}`}>🟢 Bike</button>
+          <button onClick={() => setType('rickshaw')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase ${type==='rickshaw'?'bg-amber-500 border-amber-500 text-white':'bg-slate-50 border-slate-100 text-slate-500'}`}>🟡 Rickshaw</button>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={isBykea} onChange={e=>setIsBykea(e.target.checked)} className="w-4 h-4 accent-blue-600" />
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Is Bykea Manager (can enter Bykea trips)</span>
+        </label>
+        <button onClick={addRider} className="w-full bg-blue-700 text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Add Rider</button>
+      </div>
+
+      {/* Rider List */}
+      {riders.filter(r=>!r.roles.includes('admin')).map(r => {
+        const rDisps = dispatches.filter(d => d.riderId === r.id && d.entryStatus === 'finalized');
+        const [editPin, setEditPin] = useState('');
+        return (
+          <div key={r.id} className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-black text-slate-900 uppercase">{r.name}</div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                  {r.type === 'bike' ? '🟢 Bike' : '🟡 Rickshaw'} {r.roles.includes('bykea_manager') ? '· Bykea Manager' : ''}
+                </div>
+                {r.phone && <div className="text-[9px] font-bold text-slate-400 mt-0.5">{r.phone}</div>}
+              </div>
+              <button onClick={() => removeRider(r.id)} className="text-red-300 hover:text-red-600 p-1"><Trash2 size={18}/></button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Trips</div><div className="font-black text-slate-700">{rDisps.length}</div></div>
+              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Freight</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div></div>
+              <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">COD</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.codAmount||0),0).toLocaleString()}</div></div>
+            </div>
+            <div className="flex gap-2">
+              <input value={editPin} onChange={e=>setEditPin(e.target.value)} placeholder="New PIN" inputMode="numeric" maxLength={6}
+                className="flex-1 bg-slate-50 border-2 border-slate-100 p-2 rounded-xl text-sm font-bold outline-none focus:border-blue-500" />
+              <button onClick={() => { updatePin(r.id, editPin); setEditPin(''); }}
+                className="bg-blue-100 text-blue-700 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-200">Update PIN</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Rides Settings
+function RidesSettings({ dispatchSettings, showToast }) {
+  const [bikeRate, setBikeRate] = useState(dispatchSettings.bikeRate || 55);
+  const [rickshawRate, setRickshawRate] = useState(dispatchSettings.rickshawRate || 55);
+
+  const save = async () => {
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'dispatch'), {
+      bikeRate: Number(bikeRate), rickshawRate: Number(rickshawRate)
+    });
+    showToast('Rates saved');
+  };
+
+  return (
+    <div className="space-y-4 pb-10">
+      <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 space-y-4 shadow-sm">
+        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Settings size={14}/> Fare Rates</h3>
+        <div>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Bike Rate (Rs. per km)</label>
+          <input type="number" value={bikeRate} onChange={e=>setBikeRate(e.target.value)}
+            className="w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-black text-blue-700 text-lg outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rickshaw Rate (Rs. per km)</label>
+          <input type="number" value={rickshawRate} onChange={e=>setRickshawRate(e.target.value)}
+            className="w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-black text-blue-700 text-lg outline-none focus:border-blue-500" />
+        </div>
+        <button onClick={save} className="w-full bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Save Rates</button>
+      </div>
+
+      <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 text-[10px] font-bold text-slate-500 space-y-1">
+        <div className="font-black text-slate-700 uppercase tracking-widest text-[9px] mb-2">Origins</div>
+        {Object.values(DISPATCH_ORIGINS).filter(o=>o.id!=='custom').map(o => (
+          <div key={o.id}><span className="font-black text-slate-700">{o.label}:</span> {o.address}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
