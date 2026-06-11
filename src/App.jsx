@@ -140,7 +140,7 @@ const KARACHI_AREAS = [
   { name: 'Steel Town', fromShop: 29, fromWarehouse: 18 },
   { name: 'Port Qasim', fromShop: 30, fromWarehouse: 18 },
   // --- Landhi / Cattle Colony ---
-  { name: 'Cattle Colony Landhi', fromShop: 26, fromWarehouse: 13 },
+  { name: 'Bhains Colony / Cattle Colony Landhi', fromShop: 26, fromWarehouse: 13 },
   { name: 'Babar Market Landhi', fromShop: 25, fromWarehouse: 12 },
   { name: 'Khurram Abad Landhi', fromShop: 27, fromWarehouse: 14 },
   { name: 'Saudabad', fromShop: 26, fromWarehouse: 13 },
@@ -158,7 +158,6 @@ const KARACHI_AREAS = [
   { name: 'Gadap Jumani Goth', fromShop: 36, fromWarehouse: 29 },
   { name: 'Gadap Town', fromShop: 37, fromWarehouse: 30 },
   { name: 'Taiser Town / M9', fromShop: 32, fromWarehouse: 26 },
-  { name: 'Bhains Colony', fromShop: 24, fromWarehouse: 14 },
   // --- Far Areas ---
   { name: 'Bahria Town', fromShop: 40, fromWarehouse: 40 },
   { name: 'Hub', fromShop: 48, fromWarehouse: 50 },
