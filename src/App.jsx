@@ -1822,7 +1822,7 @@ function AdminRidesView({ dispatches, riders, riderAdvances, dispatchSettings, s
   return (
     <div className="space-y-4">
       <ScrollTabs tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
+      {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
       {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
       {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
@@ -1833,16 +1833,48 @@ function AdminRidesView({ dispatches, riders, riderAdvances, dispatchSettings, s
   );
 }
 
-// Admin Dashboard with COD tracker
-function AdminDashboard({ dispatches, riders, showToast }) {
-  const today = getLocalDateStr();
-  const finalized = dispatches.filter(d => d.entryStatus === 'finalized');
-  const pending   = dispatches.filter(d => d.entryStatus === 'pending');
-  const todayAll  = dispatches.filter(d => d.date === today);
+// Admin Dashboard
+function AdminDashboard({ dispatches, riders, riderAdvances, showToast }) {
+  const [range, setRange] = useState('today');
+  const today      = getLocalDateStr();
+  const weekStart  = getWeekRange().start;
+  const monthStart = today.slice(0, 7) + '-01';
 
-  const totalCOD     = finalized.reduce((s, d) => s + (d.codAmount || 0), 0);
-  const collectedCOD = finalized.filter(d => d.codCollected).reduce((s, d) => s + (d.codAmount || 0), 0);
+  const pending  = dispatches.filter(d => d.entryStatus === 'pending');
+  const allFin   = dispatches.filter(d => d.entryStatus === 'finalized');
+
+  const inRange = (d) => {
+    if (range === 'today') return d.date === today;
+    if (range === 'week')  return d.date >= weekStart;
+    if (range === 'month') return d.date >= monthStart;
+    return true;
+  };
+
+  const fin  = allFin.filter(inRange);
+  const all  = dispatches.filter(inRange);
+
+  // Financial
+  const totalFare    = fin.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const fareRcvd     = fin.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
+  const totalAdv     = (riderAdvances || []).reduce((s, a) => s + (a.amount || 0), 0);
+  const netPayable   = totalFare - fareRcvd - totalAdv;
+
+  // COD (all time finalized)
+  const totalCOD     = allFin.reduce((s, d) => s + (d.codAmount || 0), 0);
+  const collectedCOD = allFin.filter(d => d.codCollected).reduce((s, d) => s + (d.codAmount || 0), 0);
   const pendingCOD   = totalCOD - collectedCOD;
+
+  // Trips breakdown
+  const bikeTrips     = fin.filter(d => d.riderType === 'bike').length;
+  const rickTrips     = fin.filter(d => d.riderType === 'rickshaw').length;
+  const bykeaTrips    = fin.filter(d => d.riderType === 'bykea').length;
+
+  // Per-rider in range
+  const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
+  const riderRows = nonAdmins.map(r => {
+    const t = fin.filter(d => d.riderId === r.id);
+    return { name: r.name, trips: t.length, fare: t.reduce((s, d) => s + (d.finalFare || 0), 0) };
+  }).filter(r => r.trips > 0).sort((a, b) => b.fare - a.fare);
 
   const finalizeAll = async () => {
     if (!window.confirm(`Finalize all ${pending.length} pending entries?`)) return;
@@ -1856,43 +1888,114 @@ function AdminDashboard({ dispatches, riders, showToast }) {
     showToast(`${pending.length} entries finalized!`);
   };
 
+  const lbl = 'text-[8px] font-black uppercase tracking-widest';
+
   return (
     <div className="space-y-4 pb-10">
-      {/* COD Tracker */}
-      <div className="bg-white p-5 rounded-3xl border-2 border-blue-100 space-y-3 shadow-sm">
-        <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><DollarSign size={14}/> COD Tracker (Finalized Only)</h3>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-slate-50 p-3 rounded-2xl text-center">
-            <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Out</div>
-            <div className="text-base font-black text-slate-700">Rs.{totalCOD.toLocaleString()}</div>
-          </div>
-          <div className="bg-emerald-50 p-3 rounded-2xl text-center">
-            <div className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Collected</div>
-            <div className="text-base font-black text-emerald-700">Rs.{collectedCOD.toLocaleString()}</div>
-          </div>
-          <div className="bg-red-50 p-3 rounded-2xl text-center">
-            <div className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-1">Pending</div>
-            <div className="text-base font-black text-red-600">Rs.{pendingCOD.toLocaleString()}</div>
-          </div>
-        </div>
+
+      {/* Range selector */}
+      <div className="flex gap-2">
+        {[['today','Today'],['week','This Week'],['month','This Month'],['all','All Time']].map(([k,l]) => (
+          <button key={k} onClick={() => setRange(k)}
+            className={`flex-1 py-2 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${range === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{l}</button>
+        ))}
       </div>
 
-      {/* Today Summary */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-blue-50 p-4 rounded-2xl border-2 border-blue-100 text-center">
-          <div className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-1">Today's Trips</div>
-          <div className="text-3xl font-black text-blue-700">{todayAll.length}</div>
-        </div>
-        <div className="bg-amber-50 p-4 rounded-2xl border-2 border-amber-100 text-center">
-          <div className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1">Pending Review</div>
-          <div className="text-3xl font-black text-amber-700">{pending.length}</div>
-        </div>
-      </div>
-
+      {/* Pending action */}
       {pending.length > 0 && (
-        <button onClick={finalizeAll} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-          <CheckCircle size={18}/> Finalize All Pending ({pending.length})
+        <button onClick={finalizeAll} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3.5 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+          <CheckCircle size={16}/> {pending.length} Pending — Finalize All
         </button>
+      )}
+
+      {/* Financial summary */}
+      <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
+        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><DollarSign size={13}/> Financial Summary</div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-blue-50 p-3 rounded-xl text-center">
+            <div className={`${lbl} text-blue-500 mb-1`}>Total Fare</div>
+            <div className="font-black text-blue-700 text-base">Rs.{totalFare.toLocaleString()}</div>
+            <div className="text-[8px] text-blue-400 font-bold mt-0.5">{fin.length} trips</div>
+          </div>
+          <div className="bg-emerald-50 p-3 rounded-xl text-center">
+            <div className={`${lbl} text-emerald-600 mb-1`}>Fare Received</div>
+            <div className="font-black text-emerald-700 text-base">Rs.{fareRcvd.toLocaleString()}</div>
+            <div className="text-[8px] text-emerald-500 font-bold mt-0.5">from customers</div>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-xl text-center">
+            <div className={`${lbl} text-amber-600 mb-1`}>Advances Paid</div>
+            <div className="font-black text-amber-700 text-base">Rs.{totalAdv.toLocaleString()}</div>
+            <div className="text-[8px] text-amber-400 font-bold mt-0.5">all time</div>
+          </div>
+          <div className={`p-3 rounded-xl text-center ${netPayable > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+            <div className={`${lbl} mb-1 ${netPayable > 0 ? 'text-red-500' : 'text-slate-400'}`}>Net Payable</div>
+            <div className={`font-black text-base ${netPayable > 0 ? 'text-red-600' : 'text-slate-500'}`}>Rs.{Math.max(0,netPayable).toLocaleString()}</div>
+            <div className="text-[8px] text-slate-400 font-bold mt-0.5">to riders</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trips breakdown */}
+      <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
+        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Truck size={13}/> Trips Breakdown</div>
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="bg-slate-50 p-2 rounded-xl">
+            <div className={`${lbl} text-slate-400 mb-1`}>Total</div>
+            <div className="font-black text-slate-700 text-lg">{fin.length}</div>
+          </div>
+          <div className="bg-emerald-50 p-2 rounded-xl">
+            <div className={`${lbl} text-emerald-600 mb-1`}>Bike</div>
+            <div className="font-black text-emerald-700 text-lg">{bikeTrips}</div>
+          </div>
+          <div className="bg-amber-50 p-2 rounded-xl">
+            <div className={`${lbl} text-amber-600 mb-1`}>Rick.</div>
+            <div className="font-black text-amber-700 text-lg">{rickTrips}</div>
+          </div>
+          <div className="bg-blue-50 p-2 rounded-xl">
+            <div className={`${lbl} text-blue-500 mb-1`}>Bykea</div>
+            <div className="font-black text-blue-700 text-lg">{bykeaTrips}</div>
+          </div>
+        </div>
+        {/* Pending */}
+        <div className="flex justify-between items-center bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+          <div className={`${lbl} text-amber-600`}>Pending Review</div>
+          <div className="font-black text-amber-700 text-sm">{pending.length} trips</div>
+        </div>
+      </div>
+
+      {/* COD Tracker */}
+      <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
+        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Package size={13}/> COD Tracker (All Time)</div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-slate-50 p-3 rounded-xl">
+            <div className={`${lbl} text-slate-400 mb-1`}>Total</div>
+            <div className="font-black text-slate-700">Rs.{totalCOD.toLocaleString()}</div>
+          </div>
+          <div className="bg-emerald-50 p-3 rounded-xl">
+            <div className={`${lbl} text-emerald-600 mb-1`}>Collected</div>
+            <div className="font-black text-emerald-700">Rs.{collectedCOD.toLocaleString()}</div>
+          </div>
+          <div className="bg-red-50 p-3 rounded-xl">
+            <div className={`${lbl} text-red-500 mb-1`}>Pending</div>
+            <div className="font-black text-red-600">Rs.{pendingCOD.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Per-rider summary */}
+      {riderRows.length > 0 && (
+        <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-2">
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Users size={13}/> Rider Summary</div>
+          {riderRows.map(r => (
+            <div key={r.name} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+              <div>
+                <div className="font-black text-slate-800 text-sm uppercase">{r.name}</div>
+                <div className="text-[9px] font-bold text-slate-400">{r.trips} trip{r.trips !== 1 ? 's' : ''}</div>
+              </div>
+              <div className="font-black text-blue-700">Rs.{r.fare.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Recent Pending */}
