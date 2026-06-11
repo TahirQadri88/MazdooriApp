@@ -267,6 +267,7 @@ export default function App() {
   // Rides Module Data
   const [riders, setRiders] = useState([]);
   const [dispatches, setDispatches] = useState([]);
+  const [riderAdvances, setRiderAdvances] = useState([]);
   const [dispatchSettings, setDispatchSettings] = useState(DEFAULT_DISPATCH_SETTINGS);
   const [ridesUser, setRidesUser] = useState(null); // { id, name, roles, type }
 
@@ -333,7 +334,11 @@ export default function App() {
       if (d.exists()) setDispatchSettings({ ...DEFAULT_DISPATCH_SETTINGS, ...d.data() });
     });
 
-    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); unsubRiders(); unsubDispatches(); unsubDispSettings(); };
+    const unsubAdvances = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'riderAdvances'), (s) => {
+      setRiderAdvances(s.docs.map(d => ({ ...d.data(), id: d.id })));
+    });
+
+    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); unsubRiders(); unsubDispatches(); unsubDispSettings(); unsubAdvances(); };
   }, [user]);
 
   const saveDaily = async (date, qtyMap) => {
@@ -410,7 +415,7 @@ export default function App() {
         {activeTab === 'rides' && (
           <RidesGate
             ridesUser={ridesUser} setRidesUser={setRidesUser}
-            riders={riders} dispatches={dispatches}
+            riders={riders} dispatches={dispatches} riderAdvances={riderAdvances}
             dispatchSettings={dispatchSettings}
             showToast={showToast}
           />
@@ -1324,7 +1329,7 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
 // ==========================================
 
 // Gate: shows PIN login or authenticated rides view
-function RidesGate({ ridesUser, setRidesUser, riders, dispatches, dispatchSettings, showToast }) {
+function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances, dispatchSettings, showToast }) {
   if (!ridesUser) {
     return <RidesPinLogin riders={riders} onLogin={setRidesUser} showToast={showToast} />;
   }
@@ -1341,8 +1346,8 @@ function RidesGate({ ridesUser, setRidesUser, riders, dispatches, dispatchSettin
         </button>
       </div>
       {isAdmin
-        ? <AdminRidesView dispatches={dispatches} riders={riders} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
-        : <RiderView dispatches={dispatches} riders={riders} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+        ? <AdminRidesView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+        : <RiderView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
       }
     </div>
   );
@@ -1416,15 +1421,15 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 }
 
 // Rider view: only their own trips
-function RiderPayDash({ dispatches, ridesUser, riders }) {
-  const myRider        = riders.find(r => r.id === ridesUser.id) || ridesUser;
+function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const myFin          = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
   const unpaid         = myFin.filter(d => !d.fareReceived);
   const paid           = myFin.filter(d => d.fareReceived);
   const totalEarned    = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
   const alreadyWithMe  = paid.reduce((s, d) => s + (d.finalFare || 0), 0);
   const unpaidTotal    = unpaid.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const advance        = myRider.advance || 0;
+  const myAdvances     = (riderAdvances || []).filter(a => a.riderId === ridesUser.id).sort((a,b) => b.date?.localeCompare(a.date));
+  const advance        = myAdvances.reduce((s, a) => s + (a.amount || 0), 0);
   const adminOwes      = totalEarned - alreadyWithMe - advance;
 
   const lbl = 'text-[8px] font-black uppercase tracking-widest';
@@ -1503,13 +1508,31 @@ function RiderPayDash({ dispatches, ridesUser, riders }) {
       )}
 
       {myFin.length === 0 && (
-        <div className="text-center text-slate-400 text-sm font-bold py-10">No finalized trips yet</div>
+        <div className="text-center text-slate-400 text-sm font-bold py-6">No finalized trips yet</div>
       )}
+
+      {/* Advances ledger */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center px-1">
+          <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Advances Received ({myAdvances.length})</div>
+          <div className="font-black text-amber-700 text-sm">Rs.{advance.toLocaleString()}</div>
+        </div>
+        {myAdvances.length === 0 && <div className="text-[10px] text-slate-400 font-bold px-1">No advances recorded</div>}
+        {myAdvances.map(a => (
+          <div key={a.id} className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
+            <div>
+              <div className="font-black text-amber-800 text-sm">{a.note || 'Advance'}</div>
+              <div className="text-[9px] font-bold text-amber-500">{fmtDate(a.date)}</div>
+            </div>
+            <div className="font-black text-amber-700">Rs.{(a.amount||0).toLocaleString()}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
+function RiderView({ dispatches, riders, riderAdvances, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('mypay');
   const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
   const isBykea = ridesUser.roles?.includes('bykea_manager');
@@ -1522,7 +1545,7 @@ function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser 
         {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
-      {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riders={riders} />}
+      {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
       {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
@@ -1531,19 +1554,11 @@ function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser 
 }
 
 // Admin Rides view: full access
-function RiderPayables({ dispatches, riders, showToast }) {
+function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
   const [range, setRange] = useState('all');
-  const [advances, setAdvances] = useState(() =>
-    Object.fromEntries(riders.filter(r => !r.roles?.includes('admin')).map(r => [r.id, r.advance ?? '']))
-  );
   const today = getLocalDateStr();
   const weekStart = getWeekRange().start;
   const monthStart = today.slice(0, 7) + '-01';
-
-  const saveAdvance = async (riderId, val) => {
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', riderId), { advance: parseFloat(val) || 0 });
-    showToast('Advance saved');
-  };
 
   const fin = dispatches.filter(d => {
     if (d.entryStatus !== 'finalized') return false;
@@ -1556,30 +1571,30 @@ function RiderPayables({ dispatches, riders, showToast }) {
   const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
 
   const riderStats = nonAdmins.map(r => {
-    const trips = fin.filter(d => d.riderId === r.id);
-    const totalFare     = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
-    const fareReceived  = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
-    const advance       = parseFloat(advances[r.id] ?? r.advance ?? 0) || 0;
-    const netPayable    = totalFare - fareReceived - advance;
-    return { rider: r, trips: trips.length, totalFare, fareReceived, advance, netPayable };
-  }).filter(s => s.trips > 0 || s.advance > 0);
+    const trips       = fin.filter(d => d.riderId === r.id);
+    const advEntries  = (riderAdvances || []).filter(a => a.riderId === r.id);
+    const totalFare   = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
+    const fareRcvd    = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
+    const totalAdv    = advEntries.reduce((s, a) => s + (a.amount || 0), 0);
+    const netPayable  = totalFare - fareRcvd - totalAdv;
+    return { rider: r, trips: trips.length, totalFare, fareRcvd, totalAdv, advEntries, netPayable };
+  }).filter(s => s.trips > 0 || s.totalAdv > 0);
 
-  const grandTotal    = riderStats.reduce((s, r) => s + r.totalFare, 0);
-  const grandReceived = riderStats.reduce((s, r) => s + r.fareReceived, 0);
-  const grandAdvance  = riderStats.reduce((s, r) => s + r.advance, 0);
-  const grandPayable  = riderStats.reduce((s, r) => s + r.netPayable, 0);
+  const grandTotal   = riderStats.reduce((s, r) => s + r.totalFare, 0);
+  const grandRcvd    = riderStats.reduce((s, r) => s + r.fareRcvd, 0);
+  const grandAdv     = riderStats.reduce((s, r) => s + r.totalAdv, 0);
+  const grandPayable = riderStats.reduce((s, r) => s + r.netPayable, 0);
 
   const shareReport = () => {
     const lines = riderStats.map(s =>
-      `👤 ${s.rider.name}\n  Trips: ${s.trips} | Fare: Rs.${s.totalFare.toLocaleString()}\n  Received: Rs.${s.fareReceived.toLocaleString()} | Advance: Rs.${s.advance.toLocaleString()}\n  Net Payable: Rs.${s.netPayable.toLocaleString()}`
+      `👤 ${s.rider.name}\n  Trips: ${s.trips} | Fare: Rs.${s.totalFare.toLocaleString()}\n  Received: Rs.${s.fareRcvd.toLocaleString()} | Advance: Rs.${s.totalAdv.toLocaleString()}\n  Net Payable: Rs.${s.netPayable.toLocaleString()}`
     ).join('\n\n');
-    const text = `💳 Rider Payables — Khyber Traders\n📅 Period: ${range.toUpperCase()}\n\n${lines}\n\n━━━━━━━━━━━━━━\n💰 Grand Total Fare: Rs.${grandTotal.toLocaleString()}\n✅ Total Received: Rs.${grandReceived.toLocaleString()}\n📤 Total Advance: Rs.${grandAdvance.toLocaleString()}\n🔴 Net to Pay: Rs.${grandPayable.toLocaleString()}`;
+    const text = `💳 Rider Payables — Khyber Traders\n📅 Period: ${range.toUpperCase()}\n\n${lines}\n\n━━━━━━━━━━━━━━\n💰 Grand Total Fare: Rs.${grandTotal.toLocaleString()}\n✅ Total Received: Rs.${grandRcvd.toLocaleString()}\n📤 Total Advance: Rs.${grandAdv.toLocaleString()}\n🔴 Net to Pay: Rs.${grandPayable.toLocaleString()}`;
     if (navigator.share) navigator.share({ text });
     else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
   };
 
-  const labelRow = 'text-[8px] font-black text-slate-400 uppercase tracking-widest';
-  const valRow   = 'font-black text-slate-800 text-sm';
+  const lbl = 'text-[8px] font-black text-slate-400 uppercase tracking-widest';
 
   return (
     <div className="space-y-4 pb-10">
@@ -1595,79 +1610,17 @@ function RiderPayables({ dispatches, riders, showToast }) {
       <div className="bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm">
         <div className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-2"><DollarSign size={13}/> Summary</div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-50 p-3 rounded-xl text-center">
-            <div className={labelRow}>Total Fare</div>
-            <div className={`${valRow} text-slate-700`}>Rs.{grandTotal.toLocaleString()}</div>
-          </div>
-          <div className="bg-emerald-50 p-3 rounded-xl text-center">
-            <div className={`${labelRow} text-emerald-600`}>Fare Received</div>
-            <div className={`${valRow} text-emerald-700`}>Rs.{grandReceived.toLocaleString()}</div>
-          </div>
-          <div className="bg-amber-50 p-3 rounded-xl text-center">
-            <div className={`${labelRow} text-amber-600`}>Total Advance</div>
-            <div className={`${valRow} text-amber-700`}>Rs.{grandAdvance.toLocaleString()}</div>
-          </div>
-          <div className="bg-red-50 p-3 rounded-xl text-center">
-            <div className={`${labelRow} text-red-500`}>Net to Pay</div>
-            <div className={`font-black text-red-600 text-lg`}>Rs.{grandPayable.toLocaleString()}</div>
-          </div>
+          <div className="bg-slate-50 p-3 rounded-xl text-center"><div className={lbl}>Total Fare</div><div className="font-black text-slate-700">Rs.{grandTotal.toLocaleString()}</div></div>
+          <div className="bg-emerald-50 p-3 rounded-xl text-center"><div className={`${lbl} text-emerald-600`}>Fare Received</div><div className="font-black text-emerald-700">Rs.{grandRcvd.toLocaleString()}</div></div>
+          <div className="bg-amber-50 p-3 rounded-xl text-center"><div className={`${lbl} text-amber-600`}>Total Advance</div><div className="font-black text-amber-700">Rs.{grandAdv.toLocaleString()}</div></div>
+          <div className="bg-red-50 p-3 rounded-xl text-center"><div className={`${lbl} text-red-500`}>Net to Pay</div><div className="font-black text-red-600 text-lg">Rs.{grandPayable.toLocaleString()}</div></div>
         </div>
       </div>
 
-      {/* Per-rider cards */}
-      {riderStats.length === 0 && (
-        <div className="text-center text-slate-400 text-sm font-bold py-10">No finalized trips in this period</div>
-      )}
+      {riderStats.length === 0 && <div className="text-center text-slate-400 text-sm font-bold py-10">No finalized trips in this period</div>}
+
       {riderStats.map(s => (
-        <div key={s.rider.id} className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-50">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-black text-slate-900 uppercase">{s.rider.name}</div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  {s.trips} trip{s.trips !== 1 ? 's' : ''} · {s.rider.type === 'rickshaw' ? '🟡 Rickshaw' : '🟢 Bike'}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className={`text-xs font-black ${s.netPayable > 0 ? 'text-red-600' : s.netPayable < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {s.netPayable > 0 ? `Pay Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Overpaid Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'Settled ✓'}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 space-y-3">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-slate-50 p-2 rounded-xl">
-                <div className={labelRow}>Total Fare</div>
-                <div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div>
-              </div>
-              <div className="bg-emerald-50 p-2 rounded-xl">
-                <div className={`${labelRow} text-emerald-600`}>Received</div>
-                <div className="font-black text-emerald-700">Rs.{s.fareReceived.toLocaleString()}</div>
-              </div>
-              <div className="bg-amber-50 p-2 rounded-xl">
-                <div className={`${labelRow} text-amber-600`}>Advance</div>
-                <div className="font-black text-amber-700">Rs.{s.advance.toLocaleString()}</div>
-              </div>
-            </div>
-            {/* Advance input */}
-            <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Advance Paid (Rs.) — tap away to save</label>
-              <input type="number" min="0" placeholder="0"
-                value={advances[s.rider.id] ?? ''}
-                onChange={e => setAdvances(prev => ({ ...prev, [s.rider.id]: e.target.value }))}
-                onBlur={e => saveAdvance(s.rider.id, e.target.value)}
-                className="w-full bg-amber-50 border-2 border-amber-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-amber-400 text-amber-800" />
-            </div>
-            <div className={`p-3 rounded-xl border-2 text-center font-black text-sm ${s.netPayable > 0 ? 'bg-red-50 border-red-200 text-red-700' : s.netPayable < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-              {s.netPayable > 0
-                ? `Net Payable: Rs.${s.netPayable.toLocaleString()}`
-                : s.netPayable < 0
-                ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}`
-                : 'All settled ✓'}
-            </div>
-          </div>
-        </div>
+        <RiderPayCard key={s.rider.id} s={s} showToast={showToast} lbl={lbl} />
       ))}
 
       {riderStats.length > 0 && (
@@ -1676,6 +1629,103 @@ function RiderPayables({ dispatches, riders, showToast }) {
           <Share2 size={16}/> Share Payables Report
         </button>
       )}
+    </div>
+  );
+}
+
+function RiderPayCard({ s, showToast, lbl }) {
+  const [advAmount, setAdvAmount] = useState('');
+  const [advNote, setAdvNote]     = useState('');
+  const [advDate, setAdvDate]     = useState(getLocalDateStr());
+  const [showAdv, setShowAdv]     = useState(false);
+
+  const addAdvance = async () => {
+    const amt = parseFloat(advAmount);
+    if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `adv_${Date.now()}`), {
+      riderId: s.rider.id, riderName: s.rider.name,
+      amount: amt, note: advNote.trim() || 'Advance', date: advDate,
+      createdAt: Date.now(),
+    });
+    setAdvAmount(''); setAdvNote('');
+    showToast('Advance added');
+  };
+
+  const delAdvance = async (id) => {
+    if (!window.confirm('Delete this advance entry?')) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', id));
+    showToast('Advance deleted');
+  };
+
+  const inp = "bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-400 text-slate-900";
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-100">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="font-black text-slate-900 uppercase">{s.rider.name}</div>
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              {s.trips} trip{s.trips !== 1 ? 's' : ''} · {s.rider.type === 'rickshaw' ? '🟡 Rickshaw' : '🟢 Bike'}
+            </div>
+          </div>
+          <div className={`text-sm font-black ${s.netPayable > 0 ? 'text-red-600' : s.netPayable < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {s.netPayable > 0 ? `Pay Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Overpaid Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'Settled ✓'}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-slate-50 p-2 rounded-xl"><div className={lbl}>Fare</div><div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div></div>
+          <div className="bg-emerald-50 p-2 rounded-xl"><div className={`${lbl} text-emerald-600`}>Received</div><div className="font-black text-emerald-700">Rs.{s.fareRcvd.toLocaleString()}</div></div>
+          <div className="bg-amber-50 p-2 rounded-xl"><div className={`${lbl} text-amber-600`}>Advance</div><div className="font-black text-amber-700">Rs.{s.totalAdv.toLocaleString()}</div></div>
+        </div>
+
+        {/* Net bar */}
+        <div className={`p-3 rounded-xl border-2 text-center font-black text-sm ${s.netPayable > 0 ? 'bg-red-50 border-red-200 text-red-700' : s.netPayable < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+          {s.netPayable > 0 ? `Net Payable: Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'All settled ✓'}
+        </div>
+
+        {/* Advances ledger */}
+        <button onClick={() => setShowAdv(!showAdv)}
+          className="w-full flex justify-between items-center py-2 px-3 bg-amber-50 border-2 border-amber-100 rounded-xl text-[9px] font-black text-amber-700 uppercase tracking-widest">
+          <span>💰 Advances ({s.advEntries.length})</span>
+          <span>{showAdv ? '▲ Hide' : '▼ Show'}</span>
+        </button>
+
+        {showAdv && (
+          <div className="space-y-2">
+            {/* Add advance form */}
+            <div className="bg-amber-50/60 border-2 border-amber-100 rounded-2xl p-3 space-y-2">
+              <div className="text-[9px] font-black text-amber-700 uppercase tracking-widest">+ Add Advance</div>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" min="0" placeholder="Amount (Rs.)" value={advAmount} onChange={e => setAdvAmount(e.target.value)} className={inp} />
+                <input type="date" value={advDate} onChange={e => setAdvDate(e.target.value)} className={inp} />
+              </div>
+              <input placeholder="Note (e.g. advance for this week)" value={advNote} onChange={e => setAdvNote(e.target.value)} className={`w-full ${inp}`} />
+              <button onClick={addAdvance}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                Add Advance
+              </button>
+            </div>
+
+            {/* Existing entries */}
+            {s.advEntries.length === 0 && <div className="text-[10px] text-slate-400 font-bold text-center py-2">No advances yet</div>}
+            {[...s.advEntries].sort((a,b) => b.createdAt - a.createdAt).map(a => (
+              <div key={a.id} className="flex items-center justify-between bg-white border-2 border-amber-100 rounded-xl p-3">
+                <div>
+                  <div className="font-black text-slate-800 text-sm">Rs.{(a.amount||0).toLocaleString()}</div>
+                  <div className="text-[9px] font-bold text-slate-400">{fmtDate(a.date)} · {a.note}</div>
+                </div>
+                <button onClick={() => delAdvance(a.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1705,7 +1755,7 @@ function ScrollTabs({ tabs, active, onChange }) {
   );
 }
 
-function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
+function AdminRidesView({ dispatches, riders, riderAdvances, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('dashboard');
   const TABS = [['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']];
 
@@ -1715,7 +1765,7 @@ function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, rides
       {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
-      {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} showToast={showToast} />}
+      {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
       {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
       {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} showToast={showToast} />}
@@ -2808,7 +2858,6 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
   const [eNotes, setENotes]   = useState(r.notes || '');
   const [eType, setEType]     = useState(r.type || 'bike');
   const [eBykea, setEBykea]   = useState(r.roles?.includes('bykea_manager') || false);
-  const [eAdvance, setEAdvance] = useState(r.advance ?? 0);
 
   const rDisps = dispatches.filter(d => d.riderId === r.id && d.entryStatus === 'finalized');
 
@@ -2823,7 +2872,6 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
       notes: eNotes.trim(),
       type: eType,
       roles,
-      advance: parseFloat(eAdvance) || 0,
     });
     setEditing(false);
     showToast('Profile updated');
@@ -2856,11 +2904,10 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 px-4 pb-3 text-center">
+      <div className="grid grid-cols-3 gap-2 px-4 pb-3 text-center">
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Trips</div><div className="font-black text-slate-700">{rDisps.length}</div></div>
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Freight</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div></div>
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">COD</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.codAmount||0),0).toLocaleString()}</div></div>
-        <div className="bg-amber-50 p-2 rounded-xl"><div className="text-[8px] font-black text-amber-500 uppercase">Advance</div><div className="font-black text-amber-700 text-xs">Rs.{(r.advance||0).toLocaleString()}</div></div>
       </div>
 
       {/* Edit form */}
@@ -2890,11 +2937,6 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
             <input type="checkbox" checked={eBykea} onChange={e=>setEBykea(e.target.checked)} className="w-4 h-4 accent-blue-600" />
             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Bykea Manager</span>
           </label>
-          <div>
-            <label className="text-[8px] font-black text-amber-600 uppercase tracking-widest block mb-1">Advance Paid to Rider (Rs.)</label>
-            <input type="number" min="0" value={eAdvance} onChange={e=>setEAdvance(e.target.value)}
-              placeholder="0" className="w-full bg-amber-50 border-2 border-amber-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-amber-400 text-amber-800" />
-          </div>
           <div className="flex gap-2">
             <button onClick={saveEdit} className="flex-1 bg-blue-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95">Save</button>
             <button onClick={()=>setEditing(false)} className="px-5 bg-slate-100 text-slate-600 font-black py-3 rounded-2xl text-[10px] uppercase">Cancel</button>
