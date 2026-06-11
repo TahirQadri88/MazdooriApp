@@ -1680,18 +1680,38 @@ function RiderPayables({ dispatches, riders, showToast }) {
   );
 }
 
-function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
-  const [tab, setTab] = useState('dashboard');
-
+function ScrollTabs({ tabs, active, onChange }) {
+  const ref = React.useRef(null);
+  const scroll = (dir) => ref.current?.scrollBy({ left: dir * 120, behavior: 'smooth' });
   return (
-    <div className="space-y-4">
-      <div className="overflow-x-auto hide-scrollbar">
+    <div className="flex items-center gap-1">
+      <button onClick={() => scroll(-1)} className="shrink-0 w-7 h-7 flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+        <ChevronDown size={14} className="rotate-90" />
+      </button>
+      <div ref={ref} className="overflow-x-auto hide-scrollbar flex-1">
         <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex gap-1 shadow-sm min-w-max">
-          {[['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']].map(([k,l]) => (
-            <button key={k} onClick={() => setTab(k)} className={`py-2 px-3 text-[9px] font-black rounded-xl uppercase tracking-widest whitespace-nowrap transition-all ${tab === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>{l}</button>
+          {tabs.map(([k, l]) => (
+            <button key={k} onClick={() => onChange(k)}
+              className={`py-2 px-3 text-[9px] font-black rounded-xl uppercase tracking-widest whitespace-nowrap transition-all ${active === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+              {l}
+            </button>
           ))}
         </div>
       </div>
+      <button onClick={() => scroll(1)} className="shrink-0 w-7 h-7 flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+        <ChevronDown size={14} className="-rotate-90" />
+      </button>
+    </div>
+  );
+}
+
+function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
+  const [tab, setTab] = useState('dashboard');
+  const TABS = [['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']];
+
+  return (
+    <div className="space-y-4">
+      <ScrollTabs tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
