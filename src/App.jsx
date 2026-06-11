@@ -139,10 +139,28 @@ const KARACHI_AREAS = [
   { name: 'Bin Qasim', fromShop: 28, fromWarehouse: 15 },
   { name: 'Steel Town', fromShop: 29, fromWarehouse: 18 },
   { name: 'Port Qasim', fromShop: 30, fromWarehouse: 18 },
-  // --- Far Areas ---
-  { name: 'Bahria Town', fromShop: 38, fromWarehouse: 38 },
+  // --- Landhi / Cattle Colony ---
+  { name: 'Cattle Colony Landhi', fromShop: 26, fromWarehouse: 13 },
+  { name: 'Babar Market Landhi', fromShop: 25, fromWarehouse: 12 },
+  { name: 'Khurram Abad Landhi', fromShop: 27, fromWarehouse: 14 },
+  { name: 'Saudabad', fromShop: 26, fromWarehouse: 13 },
+  { name: 'Quaidabad', fromShop: 27, fromWarehouse: 15 },
+  // --- Super Highway / Farm Areas ---
   { name: 'Superhighway (Near)', fromShop: 25, fromWarehouse: 20 },
-  { name: 'Superhighway Far', fromShop: 35, fromWarehouse: 32 },
+  { name: 'Jameel Memon Society S/W', fromShop: 30, fromWarehouse: 24 },
+  { name: 'Nagori Society', fromShop: 32, fromWarehouse: 26 },
+  { name: 'Dumba Goth', fromShop: 33, fromWarehouse: 27 },
+  { name: 'Ramzan Piri Highway', fromShop: 35, fromWarehouse: 28 },
+  { name: 'Superhighway Far', fromShop: 38, fromWarehouse: 32 },
+  // --- Gadap / Farms ---
+  { name: 'Gadap Farms Area', fromShop: 35, fromWarehouse: 28 },
+  { name: 'Gadap Abdullah Hotel', fromShop: 38, fromWarehouse: 30 },
+  { name: 'Gadap Jumani Goth', fromShop: 36, fromWarehouse: 29 },
+  { name: 'Gadap Town', fromShop: 37, fromWarehouse: 30 },
+  { name: 'Taiser Town / M9', fromShop: 32, fromWarehouse: 26 },
+  { name: 'Bhains Colony', fromShop: 24, fromWarehouse: 14 },
+  // --- Far Areas ---
+  { name: 'Bahria Town', fromShop: 40, fromWarehouse: 40 },
   { name: 'Hub', fromShop: 48, fromWarehouse: 50 },
   { name: 'Thatta / Gharo', fromShop: 90, fromWarehouse: 88 },
 ];
