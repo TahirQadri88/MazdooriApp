@@ -2397,6 +2397,7 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
   const [isBykea, setIsBykea] = useState(false);
   const [phone, setPhone]   = useState('');
   const [notes, setNotes]   = useState('');
+  const [rTab, setRTab]     = useState('riders');
 
   const addRider = async () => {
     if (!name.trim() || !pin.trim()) { showToast('Name and PIN required', 'error'); return; }
@@ -2412,8 +2413,23 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
 
   const inputCls = "w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
 
+  const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
+  const bikeList  = nonAdmins.filter(r => r.type !== 'rickshaw');
+  const rickList  = nonAdmins.filter(r => r.type === 'rickshaw');
+  const shown     = rTab === 'riders' ? bikeList : rickList;
+
   return (
     <div className="space-y-4 pb-10">
+      {/* Sub-tabs */}
+      <div className="flex gap-2">
+        <button onClick={()=>setRTab('riders')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${rTab==='riders'?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-200 text-slate-500'}`}>
+          🟢 Riders ({bikeList.length})
+        </button>
+        <button onClick={()=>setRTab('rickshaws')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${rTab==='rickshaws'?'bg-amber-500 border-amber-500 text-white':'bg-white border-slate-200 text-slate-500'}`}>
+          🟡 Rickshaws ({rickList.length})
+        </button>
+      </div>
+
       {/* Add Rider */}
       <div className="bg-white p-5 rounded-3xl border-2 border-slate-100 space-y-3 shadow-sm">
         <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Add New Rider</h3>
@@ -2434,8 +2450,11 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
         <button onClick={addRider} className="w-full bg-blue-700 text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Add Rider</button>
       </div>
 
-      {/* Rider List — each in its own component to allow useState */}
-      {riders.filter(r=>!r.roles.includes('admin')).map(r => (
+      {/* Rider List filtered by active tab */}
+      {shown.length === 0 && (
+        <div className="text-center text-slate-400 text-xs font-bold py-8">No {rTab === 'riders' ? 'riders' : 'rickshaws'} yet</div>
+      )}
+      {shown.map(r => (
         <RiderProfileCard key={r.id} rider={r} dispatches={dispatches} showToast={showToast} />
       ))}
     </div>
