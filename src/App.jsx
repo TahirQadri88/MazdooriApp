@@ -1710,13 +1710,12 @@ function RiderPayCard({ s, showToast, lbl }) {
           {s.netPayable > 0 ? `Net Payable: Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'All settled ✓'}
         </div>
 
-        {/* Pay Rider button */}
-        {s.netPayable > 0 && (
-          <button onClick={() => { setShowPay(!showPay); setPayAmount(s.netPayable.toString()); }}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-            <DollarSign size={14}/> Pay Rs.{s.netPayable.toLocaleString()} to {s.rider.name}
-          </button>
-        )}
+        {/* Pay Rider button — always visible */}
+        <button onClick={() => { setShowPay(!showPay); setPayAmount(Math.max(0, s.netPayable).toString()); }}
+          className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+          <DollarSign size={14}/> Record Payment to {s.rider.name}
+          {s.netPayable > 0 && <span className="bg-blue-600 px-2 py-0.5 rounded-lg">Rs.{s.netPayable.toLocaleString()}</span>}
+        </button>
 
         {showPay && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 space-y-2">
