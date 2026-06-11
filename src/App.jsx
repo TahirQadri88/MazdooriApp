@@ -1434,7 +1434,7 @@ function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, rides
       {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
-      {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} />}
+      {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
       {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} showToast={showToast} />}
     </div>
@@ -2050,7 +2050,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
 }
 
 // Reports (7 types)
-function RidesReports({ dispatches, riders }) {
+function RidesReports({ dispatches, riders, showToast }) {
   const [tab, setTab] = useState('summary');
   const [range, setRange] = useState(getWeekRange());
   const presets = getDatePresets();
@@ -2093,13 +2093,28 @@ function RidesReports({ dispatches, riders }) {
         </div>
       </div>
 
-      {tab === 'summary'  && <ReportSummary fin={fin} />}
-      {tab === 'rider'    && <ReportPerRider fin={fin} riders={riders} />}
-      {tab === 'bykea'    && <ReportBykea fin={fin} />}
-      {tab === 'area'     && <ReportArea fin={fin} />}
-      {tab === 'cod'      && <ReportCOD fin={fin} riders={riders} />}
-      {tab === 'cost'     && <ReportCost fin={fin} />}
+      {tab === 'summary'  && <ReportSummary fin={fin} range={range} showToast={showToast} />}
+      {tab === 'rider'    && <ReportPerRider fin={fin} riders={riders} range={range} showToast={showToast} />}
+      {tab === 'bykea'    && <ReportBykea fin={fin} range={range} showToast={showToast} />}
+      {tab === 'area'     && <ReportArea fin={fin} range={range} showToast={showToast} />}
+      {tab === 'cod'      && <ReportCOD fin={fin} riders={riders} range={range} showToast={showToast} />}
+      {tab === 'cost'     && <ReportCost fin={fin} range={range} showToast={showToast} />}
     </div>
+  );
+}
+
+// Share helper
+const shareReport = (text, showToast) => {
+  if (navigator.share) navigator.share({ text });
+  else { navigator.clipboard.writeText(text); showToast('Report copied to clipboard'); }
+};
+
+function ShareBtn({ getText, showToast }) {
+  return (
+    <button onClick={() => shareReport(getText(), showToast)}
+      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-widest active:scale-95 transition-all">
+      <Share2 size={16}/> Share on WhatsApp
+    </button>
   );
 }
 
@@ -2123,13 +2138,32 @@ function ReportCard({ title, children }) {
   );
 }
 
-function ReportSummary({ fin }) {
+function ReportSummary({ fin, range, showToast }) {
   const totalFare = fin.reduce((s,d) => s + (d.finalFare||0), 0);
   const bikes = fin.filter(d => d.riderType === 'bike');
   const rickshaws = fin.filter(d => d.riderType === 'rickshaw');
   const bykeas = fin.filter(d => d.riderType === 'bykea');
   const totalCOD = fin.reduce((s,d) => s + (d.codAmount||0), 0);
   const collectedCOD = fin.filter(d=>d.codCollected).reduce((s,d) => s+(d.codAmount||0),0);
+
+  const getText = () =>
+`🏢 *KHYBER TRADERS — Rides Summary*
+📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}
+
+📊 *Overall Summary*
+Total Rides: ${fin.length}
+Total Freight: Rs.${totalFare.toLocaleString()}
+
+🟢 Bike Rides: ${bikes.length} — Rs.${bikes.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}
+🟡 Rickshaw Rides: ${rickshaws.length} — Rs.${rickshaws.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}
+🔵 Bykea/App Rides: ${bykeas.length} — Rs.${bykeas.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}
+
+💵 Total COD Out: Rs.${totalCOD.toLocaleString()}
+✅ COD Collected: Rs.${collectedCOD.toLocaleString()}
+⏳ COD Pending: Rs.${(totalCOD-collectedCOD).toLocaleString()}
+
+_Mazdoori Calculator App — Khyber Traders_`;
+
   return (
     <div className="space-y-3">
       <ReportCard title="Overall Summary">
@@ -2142,12 +2176,30 @@ function ReportSummary({ fin }) {
         <StatRow label="COD Collected" value={`Rs.${collectedCOD.toLocaleString()}`} />
         <StatRow label="COD Pending" value={`Rs.${(totalCOD-collectedCOD).toLocaleString()}`} />
       </ReportCard>
+      <ShareBtn getText={getText} showToast={showToast} />
     </div>
   );
 }
 
-function ReportPerRider({ fin, riders }) {
+function ReportPerRider({ fin, riders, range, showToast }) {
   const riderIds = [...new Set(fin.map(d => d.riderId))];
+
+  const getText = () => {
+    let t = `🏢 *KHYBER TRADERS — Per Rider Report*\n📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}\n\n`;
+    riderIds.forEach(rid => {
+      const rd = fin.filter(d => d.riderId === rid);
+      const r = riders.find(x => x.id === rid);
+      const name = r?.name || rd[0]?.riderName || rid;
+      const fare = rd.reduce((s,d)=>s+(d.finalFare||0),0);
+      const cod = rd.reduce((s,d)=>s+(d.codAmount||0),0);
+      const codCol = rd.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
+      const km = rd.reduce((s,d)=>s+(d.distanceKm||0),0);
+      t += `👤 *${name}*\nTrips: ${rd.length}\nDistance: ${km.toFixed(1)} km\nFreight: Rs.${fare.toLocaleString()}\nCOD Carried: Rs.${cod.toLocaleString()}\nCOD Collected: Rs.${codCol.toLocaleString()}\nCOD Pending: Rs.${(cod-codCol).toLocaleString()}\n\n`;
+    });
+    t += `_Mazdoori Calculator App — Khyber Traders_`;
+    return t;
+  };
+
   return (
     <div className="space-y-3">
       {riderIds.map(rid => {
@@ -2170,14 +2222,27 @@ function ReportPerRider({ fin, riders }) {
         );
       })}
       {riderIds.length === 0 && <p className="text-center text-slate-400 text-sm py-6">No finalized data for this period</p>}
+      {riderIds.length > 0 && <ShareBtn getText={getText} showToast={showToast} />}
     </div>
   );
 }
 
-function ReportBykea({ fin }) {
+function ReportBykea({ fin, range, showToast }) {
   const bykeas = fin.filter(d => d.riderType === 'bykea');
   const total = bykeas.reduce((s,d) => s+(d.finalFare||0), 0);
   const areas = [...new Set(bykeas.map(d=>d.toArea))];
+
+  const getText = () => {
+    let t = `🏢 *KHYBER TRADERS — Bykea / App Report*\n📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}\n\n`;
+    t += `Total Rides: ${bykeas.length}\nTotal Paid: Rs.${total.toLocaleString()}\nAreas Served: ${areas.length}\n\n`;
+    if (bykeas.length > 0) {
+      t += `*Trips:*\n`;
+      bykeas.forEach(d => { t += `• ${d.partyName} — ${d.toArea}: Rs.${(d.finalFare||0).toLocaleString()} (${fmtDate(d.date)})\n`; });
+    }
+    t += `\n_Mazdoori Calculator App — Khyber Traders_`;
+    return t;
+  };
+
   return (
     <div className="space-y-3">
       <ReportCard title="Bykea / App Report">
@@ -2196,11 +2261,12 @@ function ReportBykea({ fin }) {
           ))}
         </ReportCard>
       )}
+      <ShareBtn getText={getText} showToast={showToast} />
     </div>
   );
 }
 
-function ReportArea({ fin }) {
+function ReportArea({ fin, range, showToast }) {
   const areaMap = {};
   fin.forEach(d => {
     const a = d.toArea || 'Unknown';
@@ -2209,19 +2275,48 @@ function ReportArea({ fin }) {
     areaMap[a].fare += d.finalFare || 0;
   });
   const sorted = Object.entries(areaMap).sort((a,b) => b[1].count - a[1].count);
+
+  const getText = () => {
+    let t = `🏢 *KHYBER TRADERS — Area-wise Report*\n📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}\n\n`;
+    sorted.forEach(([area, data]) => { t += `📍 ${area}: ${data.count} trip${data.count>1?'s':''} — Rs.${data.fare.toLocaleString()}\n`; });
+    t += `\n_Mazdoori Calculator App — Khyber Traders_`;
+    return t;
+  };
+
   return (
-    <ReportCard title="Area-wise Report">
-      {sorted.length === 0 && <p className="text-slate-400 text-sm text-center py-4">No data</p>}
-      {sorted.map(([area, data]) => (
-        <StatRow key={area} label={area} value={`${data.count} trip${data.count>1?'s':''}`} sub={`Rs.${data.fare.toLocaleString()}`} />
-      ))}
-    </ReportCard>
+    <div className="space-y-3">
+      <ReportCard title="Area-wise Report">
+        {sorted.length === 0 && <p className="text-slate-400 text-sm text-center py-4">No data</p>}
+        {sorted.map(([area, data]) => (
+          <StatRow key={area} label={area} value={`${data.count} trip${data.count>1?'s':''}`} sub={`Rs.${data.fare.toLocaleString()}`} />
+        ))}
+      </ReportCard>
+      {sorted.length > 0 && <ShareBtn getText={getText} showToast={showToast} />}
+    </div>
   );
 }
 
-function ReportCOD({ fin, riders }) {
+function ReportCOD({ fin, riders, range, showToast }) {
   const codEntries = fin.filter(d => d.codAmount > 0);
   const riderIds = [...new Set(codEntries.map(d=>d.riderId))];
+
+  const getText = () => {
+    let t = `🏢 *KHYBER TRADERS — COD Recovery Report*\n📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}\n\n`;
+    riderIds.forEach(rid => {
+      const rDisps = codEntries.filter(d=>d.riderId===rid);
+      const r = riders.find(x=>x.id===rid);
+      const name = r?.name || rDisps[0]?.riderName || rid;
+      const total = rDisps.reduce((s,d)=>s+(d.codAmount||0),0);
+      const collected = rDisps.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
+      const pendingTrips = rDisps.filter(d=>!d.codCollected);
+      t += `👤 *${name}*\nTotal Carried: Rs.${total.toLocaleString()}\nCollected: Rs.${collected.toLocaleString()}\nOutstanding: Rs.${(total-collected).toLocaleString()}`;
+      if (pendingTrips.length > 0) t += `\n⚠️ ${pendingTrips.length} pending trip${pendingTrips.length>1?'s':''}`;
+      t += `\n\n`;
+    });
+    t += `_Mazdoori Calculator App — Khyber Traders_`;
+    return t;
+  };
+
   return (
     <div className="space-y-3">
       {riderIds.map(rid => {
@@ -2241,23 +2336,39 @@ function ReportCOD({ fin, riders }) {
         );
       })}
       {riderIds.length === 0 && <p className="text-slate-400 text-sm text-center py-6">No COD entries for this period</p>}
+      {riderIds.length > 0 && <ShareBtn getText={getText} showToast={showToast} />}
     </div>
   );
 }
 
-function ReportCost({ fin }) {
+function ReportCost({ fin, range, showToast }) {
   const groups = { bike: fin.filter(d=>d.riderType==='bike'), rickshaw: fin.filter(d=>d.riderType==='rickshaw'), bykea: fin.filter(d=>d.riderType==='bykea') };
   const cpk = (arr) => {
     const totalKm = arr.reduce((s,d)=>s+(d.distanceKm||0),0);
     const totalFare = arr.reduce((s,d)=>s+(d.finalFare||0),0);
     return totalKm > 0 ? (totalFare/totalKm).toFixed(1) : '—';
   };
+
+  const getText = () =>
+`🏢 *KHYBER TRADERS — Cost Analysis*
+📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}
+
+💰 *Cost per km*
+🟢 Bike: Rs.${cpk(groups.bike)}/km (${groups.bike.length} trips)
+🟡 Rickshaw: Rs.${cpk(groups.rickshaw)}/km (${groups.rickshaw.length} trips)
+🔵 Bykea/App: Rs.${cpk(groups.bykea)}/km (${groups.bykea.length} trips)
+
+_Mazdoori Calculator App — Khyber Traders_`;
+
   return (
-    <ReportCard title="Cost Analysis — Rs. per km">
-      <StatRow label="Bike" value={`Rs.${cpk(groups.bike)}/km`} sub={`${groups.bike.length} trips`} />
-      <StatRow label="Rickshaw" value={`Rs.${cpk(groups.rickshaw)}/km`} sub={`${groups.rickshaw.length} trips`} />
-      <StatRow label="Bykea / App" value={`Rs.${cpk(groups.bykea)}/km`} sub={`${groups.bykea.length} trips`} />
-    </ReportCard>
+    <div className="space-y-3">
+      <ReportCard title="Cost Analysis — Rs. per km">
+        <StatRow label="Bike" value={`Rs.${cpk(groups.bike)}/km`} sub={`${groups.bike.length} trips`} />
+        <StatRow label="Rickshaw" value={`Rs.${cpk(groups.rickshaw)}/km`} sub={`${groups.rickshaw.length} trips`} />
+        <StatRow label="Bykea / App" value={`Rs.${cpk(groups.bykea)}/km`} sub={`${groups.bykea.length} trips`} />
+      </ReportCard>
+      <ShareBtn getText={getText} showToast={showToast} />
+    </div>
   );
 }
 
