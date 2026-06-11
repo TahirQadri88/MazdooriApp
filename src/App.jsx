@@ -1416,20 +1416,107 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 }
 
 // Rider view: only their own trips
+function RiderPayDash({ dispatches, ridesUser }) {
+  const myFin = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
+  const unpaid = myFin.filter(d => !d.fareReceived);
+  const paid   = myFin.filter(d => d.fareReceived);
+  const totalEarned    = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const alreadyWithMe  = paid.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const advance        = ridesUser.advance || 0;
+  const adminOwes      = totalEarned - alreadyWithMe - advance;
+
+  const lbl = 'text-[8px] font-black uppercase tracking-widest';
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Balance card */}
+      <div className={`p-5 rounded-3xl border-2 shadow-sm text-center ${adminOwes > 0 ? 'bg-blue-50 border-blue-200' : adminOwes < 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${adminOwes > 0 ? 'text-blue-600' : adminOwes < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+          {adminOwes > 0 ? 'Admin Owes You' : adminOwes < 0 ? 'You Owe Admin' : 'All Settled'}
+        </div>
+        <div className={`text-4xl font-black ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+          Rs.{Math.abs(adminOwes).toLocaleString()}
+        </div>
+        {advance > 0 && <div className="text-[9px] font-bold text-slate-500 mt-1">Advance deducted: Rs.{advance.toLocaleString()}</div>}
+      </div>
+
+      {/* Breakdown */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-white border-2 border-slate-100 p-3 rounded-2xl text-center shadow-sm">
+          <div className={`${lbl} text-slate-400 mb-1`}>Total Earned</div>
+          <div className="font-black text-slate-700">Rs.{totalEarned.toLocaleString()}</div>
+          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} trips</div>
+        </div>
+        <div className="bg-emerald-50 border-2 border-emerald-100 p-3 rounded-2xl text-center shadow-sm">
+          <div className={`${lbl} text-emerald-600 mb-1`}>With Me</div>
+          <div className="font-black text-emerald-700">Rs.{alreadyWithMe.toLocaleString()}</div>
+          <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} trips</div>
+        </div>
+        <div className="bg-amber-50 border-2 border-amber-100 p-3 rounded-2xl text-center shadow-sm">
+          <div className={`${lbl} text-amber-600 mb-1`}>Advance</div>
+          <div className="font-black text-amber-700">Rs.{advance.toLocaleString()}</div>
+        </div>
+      </div>
+
+      {/* Unpaid trips */}
+      {unpaid.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[10px] font-black text-red-500 uppercase tracking-widest px-1 flex items-center gap-1">
+            <AlertCircle size={12}/> Pending Payment ({unpaid.length})
+          </div>
+          {unpaid.map(d => (
+            <div key={d.id} className="bg-white border-2 border-red-100 rounded-2xl p-3 flex justify-between items-center">
+              <div>
+                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName}</div>
+                <div className="text-[9px] font-bold text-slate-400">{d.toArea} · {fmtDate(d.date)}</div>
+              </div>
+              <div className="font-black text-red-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Paid trips */}
+      {paid.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest px-1 flex items-center gap-1">
+            <CheckCircle size={12}/> Fare Collected ({paid.length})
+          </div>
+          {paid.map(d => (
+            <div key={d.id} className="bg-white border-2 border-emerald-100 rounded-2xl p-3 flex justify-between items-center opacity-75">
+              <div>
+                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName}</div>
+                <div className="text-[9px] font-bold text-slate-400">{d.toArea} · {fmtDate(d.date)}</div>
+              </div>
+              <div className="font-black text-emerald-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {myFin.length === 0 && (
+        <div className="text-center text-slate-400 text-sm font-bold py-10">No finalized trips yet</div>
+      )}
+    </div>
+  );
+}
+
 function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
-  const [tab, setTab] = useState('new');
+  const [tab, setTab] = useState('mypay');
   const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
-  const isBykea = ridesUser.roles.includes('bykea_manager');
+  const isBykea = ridesUser.roles?.includes('bykea_manager');
 
   return (
     <div className="space-y-4">
       <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
+        <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Pay</button>
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>New Trip</button>
         {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
-      {tab === 'new' && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
-      {tab === 'bykea' && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} />}
+      {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
     </div>
   );
@@ -1438,10 +1525,17 @@ function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser 
 // Admin Rides view: full access
 function RiderPayables({ dispatches, riders, showToast }) {
   const [range, setRange] = useState('all');
-  const [advances, setAdvances] = useState({});
+  const [advances, setAdvances] = useState(() =>
+    Object.fromEntries(riders.filter(r => !r.roles?.includes('admin')).map(r => [r.id, r.advance ?? '']))
+  );
   const today = getLocalDateStr();
   const weekStart = getWeekRange().start;
   const monthStart = today.slice(0, 7) + '-01';
+
+  const saveAdvance = async (riderId, val) => {
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riders', riderId), { advance: parseFloat(val) || 0 });
+    showToast('Advance saved');
+  };
 
   const fin = dispatches.filter(d => {
     if (d.entryStatus !== 'finalized') return false;
@@ -1457,10 +1551,10 @@ function RiderPayables({ dispatches, riders, showToast }) {
     const trips = fin.filter(d => d.riderId === r.id);
     const totalFare     = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
     const fareReceived  = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
-    const advance       = parseFloat(advances[r.id] || 0) || 0;
+    const advance       = parseFloat(advances[r.id] ?? r.advance ?? 0) || 0;
     const netPayable    = totalFare - fareReceived - advance;
     return { rider: r, trips: trips.length, totalFare, fareReceived, advance, netPayable };
-  }).filter(s => s.trips > 0 || parseFloat(advances[s.rider.id] || 0) > 0);
+  }).filter(s => s.trips > 0 || s.advance > 0);
 
   const grandTotal    = riderStats.reduce((s, r) => s + r.totalFare, 0);
   const grandReceived = riderStats.reduce((s, r) => s + r.fareReceived, 0);
@@ -1550,10 +1644,11 @@ function RiderPayables({ dispatches, riders, showToast }) {
             </div>
             {/* Advance input */}
             <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Advance Paid (Rs.)</label>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Advance Paid (Rs.) — tap away to save</label>
               <input type="number" min="0" placeholder="0"
-                value={advances[s.rider.id] || ''}
+                value={advances[s.rider.id] ?? ''}
                 onChange={e => setAdvances(prev => ({ ...prev, [s.rider.id]: e.target.value }))}
+                onBlur={e => saveAdvance(s.rider.id, e.target.value)}
                 className="w-full bg-amber-50 border-2 border-amber-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-amber-400 text-amber-800" />
             </div>
             <div className={`p-3 rounded-xl border-2 text-center font-black text-sm ${s.netPayable > 0 ? 'bg-red-50 border-red-200 text-red-700' : s.netPayable < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
