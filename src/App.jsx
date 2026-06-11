@@ -1615,6 +1615,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
   const [notes, setNotes]         = useState('');
   const [status, setStatus]       = useState('sent');
   const [saving, setSaving]       = useState(false);
+  const [fareReceived, setFareReceived] = useState(false);
 
   const bikeRate = dispatchSettings.bikeRate || 55;
   const rickshawRate = dispatchSettings.rickshawRate || 55;
@@ -1683,6 +1684,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
         finalFare: parseFloat(finalFare) || 0,
         codAmount: parseFloat(codAmount) || 0,
         codCollected,
+        fareReceived,
         notes: notes.trim(),
         status,
         entryStatus: isAdmin ? 'finalized' : 'pending',
@@ -1829,6 +1831,12 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
           </div>
         )}
 
+        {/* Fare Received toggle */}
+        <button onClick={() => setFareReceived(!fareReceived)}
+          className={`w-full py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${fareReceived ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+          {fareReceived ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received'}
+        </button>
+
         {/* COD */}
         <div className="space-y-2">
           <div>
@@ -1904,6 +1912,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [codDone, setCodDone] = useState(d.codCollected);
+  const [fareRcvd, setFareRcvd] = useState(d.fareReceived || false);
   const m = RIDER_TYPE_META[d.riderType] || RIDER_TYPE_META.bike;
 
   // Edit state (inline)
@@ -1926,6 +1935,13 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { codCollected: next });
     setCodDone(next);
     showToast(next ? 'COD marked collected' : 'COD marked pending');
+  };
+
+  const toggleFareReceived = async () => {
+    const next = !fareRcvd;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { fareReceived: next });
+    setFareRcvd(next);
+    showToast(next ? 'Fare marked received' : 'Fare marked pending');
   };
 
   const finalize = async () => {
@@ -1995,6 +2011,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-[9px] font-black uppercase ${statusColor}`}>{d.entryStatus}</span>
                 {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
+                <span className={`text-[9px] font-black uppercase ${d.fareReceived ? 'text-emerald-600' : 'text-orange-500'}`}>{d.fareReceived ? '💰 Fare ✓' : '💰 Fare ⏳'}</span>
               </div>
             </div>
           </div>
@@ -2025,6 +2042,12 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
           </div>
           {d.loadDescription && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Load</span><span className="font-bold text-slate-700">{d.loadDescription}</span></div>}
           {d.notes && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Notes</span><span className="font-bold text-slate-700">{d.notes}</span></div>}
+
+          {/* Fare Received toggle */}
+          <button onClick={toggleFareReceived}
+            className={`w-full py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${fareRcvd ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
+            {fareRcvd ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received'}
+          </button>
 
           <div className="flex gap-2 flex-wrap pt-1">
             <button onClick={share} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
