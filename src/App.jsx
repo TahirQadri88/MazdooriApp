@@ -1384,7 +1384,7 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
               <div className="text-left">
                 <div className="font-black text-slate-900 uppercase">{r.name}</div>
                 <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                  {r.roles.includes('admin') ? 'Admin' : r.roles.includes('bykea_manager') ? 'Rider + Bykea Manager' : 'Bike Rider'}
+                  {r.roles?.includes('admin') ? 'Admin' : r.type === 'rickshaw' ? 'Rickshaw Rider' : r.roles?.includes('bykea_manager') ? 'Rider + Bykea Manager' : 'Bike Rider'}
                 </div>
               </div>
             </button>
