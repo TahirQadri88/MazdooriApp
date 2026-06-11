@@ -2414,16 +2414,15 @@ function RiderProfilesManager({ riders, dispatches, showToast }) {
   const inputCls = "w-full bg-slate-50 border-2 border-slate-100 p-3 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
 
   const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
-  const bikeList  = nonAdmins.filter(r => r.type !== 'rickshaw');
   const rickList  = nonAdmins.filter(r => r.type === 'rickshaw');
-  const shown     = rTab === 'riders' ? bikeList : rickList;
+  const shown     = rTab === 'riders' ? nonAdmins : rickList;
 
   return (
     <div className="space-y-4 pb-10">
       {/* Sub-tabs */}
       <div className="flex gap-2">
         <button onClick={()=>setRTab('riders')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${rTab==='riders'?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-200 text-slate-500'}`}>
-          🟢 Riders ({bikeList.length})
+          🟢 Riders ({nonAdmins.length})
         </button>
         <button onClick={()=>setRTab('rickshaws')} className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${rTab==='rickshaws'?'bg-amber-500 border-amber-500 text-white':'bg-white border-slate-200 text-slate-500'}`}>
           🟡 Rickshaws ({rickList.length})
