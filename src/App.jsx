@@ -1532,6 +1532,65 @@ function AdminDashboard({ dispatches, riders, showToast }) {
 }
 
 // Dispatch Entry Form
+function AreaPicker({ value, onChange, inputCls, labelCls, toCustom, setToCustom }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const filtered = q.trim()
+    ? KARACHI_AREAS.filter(a => a.name.toLowerCase().includes(q.toLowerCase()))
+    : KARACHI_AREAS;
+
+  const select = (name) => {
+    onChange(name);
+    setQ(name === '__custom__' ? '' : name);
+    setOpen(false);
+  };
+
+  const handleInput = (v) => {
+    setQ(v);
+    onChange('');
+    setOpen(true);
+  };
+
+  return (
+    <div>
+      <label className={labelCls}>To Area</label>
+      <div className="relative">
+        <input
+          value={value && value !== '__custom__' ? value : q}
+          onChange={e => handleInput(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Type to search area..."
+          className={inputCls}
+          autoComplete="off"
+        />
+        {open && (
+          <div className="absolute z-50 w-full bg-white border-2 border-blue-200 rounded-2xl shadow-xl mt-1 max-h-52 overflow-y-auto">
+            {filtered.map(a => (
+              <button key={a.name} type="button" onMouseDown={() => select(a.name)}
+                className="w-full text-left px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-blue-50 border-b border-slate-50 last:border-0">
+                {a.name}
+                <span className="text-[9px] font-black text-slate-400 ml-2">{a.fromShop}km</span>
+              </button>
+            ))}
+            <button type="button" onMouseDown={() => select('__custom__')}
+              className="w-full text-left px-4 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50">
+              + Custom area...
+            </button>
+            {filtered.length === 0 && (
+              <div className="px-4 py-3 text-xs text-slate-400 font-bold">No match — use Custom</div>
+            )}
+          </div>
+        )}
+      </div>
+      {value === '__custom__' && (
+        <input className={`${inputCls} mt-2`} placeholder="Enter area..." value={toCustom} onChange={e => setToCustom(e.target.value)} />
+      )}
+    </div>
+  );
+}
+
 function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], showToast, onDone, isAdmin = false }) {
   const today = getLocalDateStr();
   const now = new Date();
@@ -1672,15 +1731,8 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
         </div>
 
         {/* To Area */}
-        <div>
-          <label className={labelCls}>To Area</label>
-          <select value={toArea} onChange={e => setToArea(e.target.value)} className={inputCls}>
-            <option value="">— Select Area —</option>
-            {KARACHI_AREAS.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
-            <option value="__custom__">Custom (free text)</option>
-          </select>
-          {toArea === '__custom__' && <input className={`${inputCls} mt-2`} placeholder="Enter area..." value={toCustom} onChange={e => setToCustom(e.target.value)} />}
-        </div>
+        <AreaPicker value={toArea} onChange={setToArea} inputCls={inputCls} labelCls={labelCls}
+          toCustom={toCustom} setToCustom={setToCustom} />
 
         {/* Party Name */}
         <div>
