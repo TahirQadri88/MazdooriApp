@@ -1416,13 +1416,15 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 }
 
 // Rider view: only their own trips
-function RiderPayDash({ dispatches, ridesUser }) {
-  const myFin = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
-  const unpaid = myFin.filter(d => !d.fareReceived);
-  const paid   = myFin.filter(d => d.fareReceived);
+function RiderPayDash({ dispatches, ridesUser, riders }) {
+  const myRider        = riders.find(r => r.id === ridesUser.id) || ridesUser;
+  const myFin          = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
+  const unpaid         = myFin.filter(d => !d.fareReceived);
+  const paid           = myFin.filter(d => d.fareReceived);
   const totalEarned    = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
   const alreadyWithMe  = paid.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const advance        = ridesUser.advance || 0;
+  const unpaidTotal    = unpaid.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const advance        = myRider.advance || 0;
   const adminOwes      = totalEarned - alreadyWithMe - advance;
 
   const lbl = 'text-[8px] font-black uppercase tracking-widest';
@@ -1461,8 +1463,11 @@ function RiderPayDash({ dispatches, ridesUser }) {
       {/* Unpaid trips */}
       {unpaid.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[10px] font-black text-red-500 uppercase tracking-widest px-1 flex items-center gap-1">
-            <AlertCircle size={12}/> Pending Payment ({unpaid.length})
+          <div className="flex justify-between items-center px-1">
+            <div className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
+              <AlertCircle size={12}/> Pending Payment ({unpaid.length} trips)
+            </div>
+            <div className="font-black text-red-600 text-sm">Rs.{unpaidTotal.toLocaleString()}</div>
           </div>
           {unpaid.map(d => (
             <div key={d.id} className="bg-white border-2 border-red-100 rounded-2xl p-3 flex justify-between items-center">
@@ -1479,8 +1484,11 @@ function RiderPayDash({ dispatches, ridesUser }) {
       {/* Paid trips */}
       {paid.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest px-1 flex items-center gap-1">
-            <CheckCircle size={12}/> Fare Collected ({paid.length})
+          <div className="flex justify-between items-center px-1">
+            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+              <CheckCircle size={12}/> Fare Collected ({paid.length} trips)
+            </div>
+            <div className="font-black text-emerald-600 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
           </div>
           {paid.map(d => (
             <div key={d.id} className="bg-white border-2 border-emerald-100 rounded-2xl p-3 flex justify-between items-center opacity-75">
@@ -1514,7 +1522,7 @@ function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser 
         {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
-      {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} />}
+      {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riders={riders} />}
       {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
@@ -2780,6 +2788,7 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
   const [eNotes, setENotes]   = useState(r.notes || '');
   const [eType, setEType]     = useState(r.type || 'bike');
   const [eBykea, setEBykea]   = useState(r.roles?.includes('bykea_manager') || false);
+  const [eAdvance, setEAdvance] = useState(r.advance ?? 0);
 
   const rDisps = dispatches.filter(d => d.riderId === r.id && d.entryStatus === 'finalized');
 
@@ -2794,6 +2803,7 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
       notes: eNotes.trim(),
       type: eType,
       roles,
+      advance: parseFloat(eAdvance) || 0,
     });
     setEditing(false);
     showToast('Profile updated');
@@ -2826,10 +2836,11 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 px-4 pb-3 text-center">
+      <div className="grid grid-cols-4 gap-2 px-4 pb-3 text-center">
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Trips</div><div className="font-black text-slate-700">{rDisps.length}</div></div>
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">Freight</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div></div>
         <div className="bg-slate-50 p-2 rounded-xl"><div className="text-[8px] font-black text-slate-400 uppercase">COD</div><div className="font-black text-slate-700 text-xs">Rs.{rDisps.reduce((s,d)=>s+(d.codAmount||0),0).toLocaleString()}</div></div>
+        <div className="bg-amber-50 p-2 rounded-xl"><div className="text-[8px] font-black text-amber-500 uppercase">Advance</div><div className="font-black text-amber-700 text-xs">Rs.{(r.advance||0).toLocaleString()}</div></div>
       </div>
 
       {/* Edit form */}
@@ -2859,6 +2870,11 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
             <input type="checkbox" checked={eBykea} onChange={e=>setEBykea(e.target.checked)} className="w-4 h-4 accent-blue-600" />
             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Bykea Manager</span>
           </label>
+          <div>
+            <label className="text-[8px] font-black text-amber-600 uppercase tracking-widest block mb-1">Advance Paid to Rider (Rs.)</label>
+            <input type="number" min="0" value={eAdvance} onChange={e=>setEAdvance(e.target.value)}
+              placeholder="0" className="w-full bg-amber-50 border-2 border-amber-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-amber-400 text-amber-800" />
+          </div>
           <div className="flex gap-2">
             <button onClick={saveEdit} className="flex-1 bg-blue-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95">Save</button>
             <button onClick={()=>setEditing(false)} className="px-5 bg-slate-100 text-slate-600 font-black py-3 rounded-2xl text-[10px] uppercase">Cancel</button>
