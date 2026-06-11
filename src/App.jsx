@@ -1436,6 +1436,147 @@ function RiderView({ dispatches, riders, dispatchSettings, showToast, ridesUser 
 }
 
 // Admin Rides view: full access
+function RiderPayables({ dispatches, riders, showToast }) {
+  const [range, setRange] = useState('all');
+  const [advances, setAdvances] = useState({});
+  const today = getLocalDateStr();
+  const weekStart = getWeekRange().start;
+  const monthStart = today.slice(0, 7) + '-01';
+
+  const fin = dispatches.filter(d => {
+    if (d.entryStatus !== 'finalized') return false;
+    if (range === 'today') return d.date === today;
+    if (range === 'week')  return d.date >= weekStart;
+    if (range === 'month') return d.date >= monthStart;
+    return true;
+  });
+
+  const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
+
+  const riderStats = nonAdmins.map(r => {
+    const trips = fin.filter(d => d.riderId === r.id);
+    const totalFare     = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
+    const fareReceived  = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
+    const advance       = parseFloat(advances[r.id] || 0) || 0;
+    const netPayable    = totalFare - fareReceived - advance;
+    return { rider: r, trips: trips.length, totalFare, fareReceived, advance, netPayable };
+  }).filter(s => s.trips > 0 || parseFloat(advances[s.rider.id] || 0) > 0);
+
+  const grandTotal    = riderStats.reduce((s, r) => s + r.totalFare, 0);
+  const grandReceived = riderStats.reduce((s, r) => s + r.fareReceived, 0);
+  const grandAdvance  = riderStats.reduce((s, r) => s + r.advance, 0);
+  const grandPayable  = riderStats.reduce((s, r) => s + r.netPayable, 0);
+
+  const shareReport = () => {
+    const lines = riderStats.map(s =>
+      `👤 ${s.rider.name}\n  Trips: ${s.trips} | Fare: Rs.${s.totalFare.toLocaleString()}\n  Received: Rs.${s.fareReceived.toLocaleString()} | Advance: Rs.${s.advance.toLocaleString()}\n  Net Payable: Rs.${s.netPayable.toLocaleString()}`
+    ).join('\n\n');
+    const text = `💳 Rider Payables — Khyber Traders\n📅 Period: ${range.toUpperCase()}\n\n${lines}\n\n━━━━━━━━━━━━━━\n💰 Grand Total Fare: Rs.${grandTotal.toLocaleString()}\n✅ Total Received: Rs.${grandReceived.toLocaleString()}\n📤 Total Advance: Rs.${grandAdvance.toLocaleString()}\n🔴 Net to Pay: Rs.${grandPayable.toLocaleString()}`;
+    if (navigator.share) navigator.share({ text });
+    else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
+  };
+
+  const labelRow = 'text-[8px] font-black text-slate-400 uppercase tracking-widest';
+  const valRow   = 'font-black text-slate-800 text-sm';
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Range filter */}
+      <div className="flex gap-2">
+        {[['all','All Time'],['month','This Month'],['week','This Week'],['today','Today']].map(([k,l]) => (
+          <button key={k} onClick={() => setRange(k)}
+            className={`flex-1 py-2 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${range === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{l}</button>
+        ))}
+      </div>
+
+      {/* Grand totals */}
+      <div className="bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm">
+        <div className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-2"><DollarSign size={13}/> Summary</div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-slate-50 p-3 rounded-xl text-center">
+            <div className={labelRow}>Total Fare</div>
+            <div className={`${valRow} text-slate-700`}>Rs.{grandTotal.toLocaleString()}</div>
+          </div>
+          <div className="bg-emerald-50 p-3 rounded-xl text-center">
+            <div className={`${labelRow} text-emerald-600`}>Fare Received</div>
+            <div className={`${valRow} text-emerald-700`}>Rs.{grandReceived.toLocaleString()}</div>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-xl text-center">
+            <div className={`${labelRow} text-amber-600`}>Total Advance</div>
+            <div className={`${valRow} text-amber-700`}>Rs.{grandAdvance.toLocaleString()}</div>
+          </div>
+          <div className="bg-red-50 p-3 rounded-xl text-center">
+            <div className={`${labelRow} text-red-500`}>Net to Pay</div>
+            <div className={`font-black text-red-600 text-lg`}>Rs.{grandPayable.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Per-rider cards */}
+      {riderStats.length === 0 && (
+        <div className="text-center text-slate-400 text-sm font-bold py-10">No finalized trips in this period</div>
+      )}
+      {riderStats.map(s => (
+        <div key={s.rider.id} className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-50">
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="font-black text-slate-900 uppercase">{s.rider.name}</div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                  {s.trips} trip{s.trips !== 1 ? 's' : ''} · {s.rider.type === 'rickshaw' ? '🟡 Rickshaw' : '🟢 Bike'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-xs font-black ${s.netPayable > 0 ? 'text-red-600' : s.netPayable < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {s.netPayable > 0 ? `Pay Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Overpaid Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'Settled ✓'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-50 p-2 rounded-xl">
+                <div className={labelRow}>Total Fare</div>
+                <div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div>
+              </div>
+              <div className="bg-emerald-50 p-2 rounded-xl">
+                <div className={`${labelRow} text-emerald-600`}>Received</div>
+                <div className="font-black text-emerald-700">Rs.{s.fareReceived.toLocaleString()}</div>
+              </div>
+              <div className="bg-amber-50 p-2 rounded-xl">
+                <div className={`${labelRow} text-amber-600`}>Advance</div>
+                <div className="font-black text-amber-700">Rs.{s.advance.toLocaleString()}</div>
+              </div>
+            </div>
+            {/* Advance input */}
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Advance Paid (Rs.)</label>
+              <input type="number" min="0" placeholder="0"
+                value={advances[s.rider.id] || ''}
+                onChange={e => setAdvances(prev => ({ ...prev, [s.rider.id]: e.target.value }))}
+                className="w-full bg-amber-50 border-2 border-amber-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-amber-400 text-amber-800" />
+            </div>
+            <div className={`p-3 rounded-xl border-2 text-center font-black text-sm ${s.netPayable > 0 ? 'bg-red-50 border-red-200 text-red-700' : s.netPayable < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+              {s.netPayable > 0
+                ? `Net Payable: Rs.${s.netPayable.toLocaleString()}`
+                : s.netPayable < 0
+                ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}`
+                : 'All settled ✓'}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {riderStats.length > 0 && (
+        <button onClick={shareReport}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-widest active:scale-95 transition-all">
+          <Share2 size={16}/> Share Payables Report
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('dashboard');
 
@@ -1443,7 +1584,7 @@ function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, rides
     <div className="space-y-4">
       <div className="overflow-x-auto hide-scrollbar">
         <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex gap-1 shadow-sm min-w-max">
-          {[['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['reports','Reports'],['riders','Riders'],['settings','Settings']].map(([k,l]) => (
+          {[['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']].map(([k,l]) => (
             <button key={k} onClick={() => setTab(k)} className={`py-2 px-3 text-[9px] font-black rounded-xl uppercase tracking-widest whitespace-nowrap transition-all ${tab === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>{l}</button>
           ))}
         </div>
@@ -1451,6 +1592,7 @@ function AdminRidesView({ dispatches, riders, dispatchSettings, showToast, rides
       {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
+      {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
       {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} showToast={showToast} />}
