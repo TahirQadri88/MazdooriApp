@@ -1511,22 +1511,26 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="text-center text-slate-400 text-sm font-bold py-6">No finalized trips yet</div>
       )}
 
-      {/* Advances ledger */}
+      {/* Advances + Payments ledger */}
       <div className="space-y-2">
         <div className="flex justify-between items-center px-1">
-          <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Advances Received ({myAdvances.length})</div>
-          <div className="font-black text-amber-700 text-sm">Rs.{advance.toLocaleString()}</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Payment Ledger ({myAdvances.length})</div>
+          <div className="font-black text-slate-700 text-sm">Total: Rs.{advance.toLocaleString()}</div>
         </div>
-        {myAdvances.length === 0 && <div className="text-[10px] text-slate-400 font-bold px-1">No advances recorded</div>}
-        {myAdvances.map(a => (
-          <div key={a.id} className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
-            <div>
-              <div className="font-black text-amber-800 text-sm">{a.note || 'Advance'}</div>
-              <div className="text-[9px] font-bold text-amber-500">{fmtDate(a.date)}</div>
+        {myAdvances.length === 0 && <div className="text-[10px] text-slate-400 font-bold px-1">No entries recorded</div>}
+        {myAdvances.map(a => {
+          const isPayment = a.type === 'payment';
+          return (
+            <div key={a.id} className={`border-2 rounded-2xl p-3 flex justify-between items-center ${isPayment ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-100'}`}>
+              <div>
+                <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : 'text-amber-500'}`}>{isPayment ? '✅ Payment' : '💰 Advance'}</div>
+                <div className={`font-black text-sm ${isPayment ? 'text-blue-800' : 'text-amber-800'}`}>{a.note || (isPayment ? 'Payment' : 'Advance')}</div>
+                <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : 'text-amber-400'}`}>{fmtDate(a.date)}</div>
+              </div>
+              <div className={`font-black ${isPayment ? 'text-blue-700' : 'text-amber-700'}`}>Rs.{(a.amount||0).toLocaleString()}</div>
             </div>
-            <div className="font-black text-amber-700">Rs.{(a.amount||0).toLocaleString()}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1638,6 +1642,23 @@ function RiderPayCard({ s, showToast, lbl }) {
   const [advNote, setAdvNote]     = useState('');
   const [advDate, setAdvDate]     = useState(getLocalDateStr());
   const [showAdv, setShowAdv]     = useState(false);
+  const [showPay, setShowPay]     = useState(false);
+  const [payAmount, setPayAmount] = useState('');
+  const [payDate, setPayDate]     = useState(getLocalDateStr());
+  const [payNote, setPayNote]     = useState('');
+
+  const recordPayment = async () => {
+    const amt = parseFloat(payAmount);
+    if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `pay_${Date.now()}`), {
+      riderId: s.rider.id, riderName: s.rider.name,
+      amount: amt, note: payNote.trim() || 'Salary Payment',
+      date: payDate, type: 'payment',
+      createdAt: Date.now(),
+    });
+    setShowPay(false); setPayAmount(''); setPayNote('');
+    showToast('Payment recorded');
+  };
 
   const addAdvance = async () => {
     const amt = parseFloat(advAmount);
@@ -1689,10 +1710,46 @@ function RiderPayCard({ s, showToast, lbl }) {
           {s.netPayable > 0 ? `Net Payable: Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'All settled ✓'}
         </div>
 
+        {/* Pay Rider button */}
+        {s.netPayable > 0 && (
+          <button onClick={() => { setShowPay(!showPay); setPayAmount(s.netPayable.toString()); }}
+            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+            <DollarSign size={14}/> Pay Rs.{s.netPayable.toLocaleString()} to {s.rider.name}
+          </button>
+        )}
+
+        {showPay && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 space-y-2">
+            <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Record Payment to {s.rider.name}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Amount (Rs.)</label>
+                <input type="number" min="0" value={payAmount} onChange={e => setPayAmount(e.target.value)}
+                  className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-blue-900" />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Date</label>
+                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)}
+                  className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+              </div>
+            </div>
+            <input placeholder="Note (optional)" value={payNote} onChange={e => setPayNote(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900" />
+            <div className="flex gap-2">
+              <button onClick={recordPayment}
+                className="flex-1 bg-blue-700 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                Confirm Payment
+              </button>
+              <button onClick={() => setShowPay(false)} className="px-4 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">Cancel</button>
+            </div>
+          </div>
+        )}
+
         {/* Advances ledger */}
+        {/* Advances + Payments ledger toggle */}
         <button onClick={() => setShowAdv(!showAdv)}
           className="w-full flex justify-between items-center py-2 px-3 bg-amber-50 border-2 border-amber-100 rounded-xl text-[9px] font-black text-amber-700 uppercase tracking-widest">
-          <span>💰 Advances ({s.advEntries.length})</span>
+          <span>📋 Ledger ({s.advEntries.length} entries)</span>
           <span>{showAdv ? '▲ Hide' : '▼ Show'}</span>
         </button>
 
@@ -1713,16 +1770,20 @@ function RiderPayCard({ s, showToast, lbl }) {
             </div>
 
             {/* Existing entries */}
-            {s.advEntries.length === 0 && <div className="text-[10px] text-slate-400 font-bold text-center py-2">No advances yet</div>}
-            {[...s.advEntries].sort((a,b) => b.createdAt - a.createdAt).map(a => (
-              <div key={a.id} className="flex items-center justify-between bg-white border-2 border-amber-100 rounded-xl p-3">
-                <div>
-                  <div className="font-black text-slate-800 text-sm">Rs.{(a.amount||0).toLocaleString()}</div>
-                  <div className="text-[9px] font-bold text-slate-400">{fmtDate(a.date)} · {a.note}</div>
+            {s.advEntries.length === 0 && <div className="text-[10px] text-slate-400 font-bold text-center py-2">No entries yet</div>}
+            {[...s.advEntries].sort((a,b) => b.createdAt - a.createdAt).map(a => {
+              const isPayment = a.type === 'payment';
+              return (
+                <div key={a.id} className={`flex items-center justify-between border-2 rounded-xl p-3 ${isPayment ? 'bg-blue-50 border-blue-200' : 'bg-white border-amber-100'}`}>
+                  <div>
+                    <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : 'text-amber-500'}`}>{isPayment ? '✅ Payment' : '💰 Advance'}</div>
+                    <div className="font-black text-slate-800 text-sm">Rs.{(a.amount||0).toLocaleString()}</div>
+                    <div className="text-[9px] font-bold text-slate-400">{fmtDate(a.date)} · {a.note}</div>
+                  </div>
+                  <button onClick={() => delAdvance(a.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
                 </div>
-                <button onClick={() => delAdvance(a.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
