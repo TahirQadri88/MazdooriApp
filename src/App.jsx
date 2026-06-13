@@ -286,6 +286,7 @@ export default function App() {
   const [riders, setRiders] = useState([]);
   const [dispatches, setDispatches] = useState([]);
   const [riderAdvances, setRiderAdvances] = useState([]);
+  const [rickshawAreaRates, setRickshawAreaRates] = useState([]);
   const [dispatchSettings, setDispatchSettings] = useState(DEFAULT_DISPATCH_SETTINGS);
   const [ridesUser, setRidesUser] = useState(null); // { id, name, roles, type }
 
@@ -356,7 +357,11 @@ export default function App() {
       setRiderAdvances(s.docs.map(d => ({ ...d.data(), id: d.id })));
     });
 
-    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); unsubRiders(); unsubDispatches(); unsubDispSettings(); unsubAdvances(); };
+    const unsubRickRates = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates'), (s) => {
+      setRickshawAreaRates(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => (a.area || '').localeCompare(b.area || '')));
+    });
+
+    return () => { unsubCats(); unsubLogs(); unsubPays(); unsubAdmin(); unsubBackups(); unsubRiders(); unsubDispatches(); unsubDispSettings(); unsubAdvances(); unsubRickRates(); };
   }, [user]);
 
   const saveDaily = async (date, qtyMap) => {
@@ -434,6 +439,7 @@ export default function App() {
           <RidesGate
             ridesUser={ridesUser} setRidesUser={setRidesUser}
             riders={riders} dispatches={dispatches} riderAdvances={riderAdvances}
+            rickshawAreaRates={rickshawAreaRates}
             dispatchSettings={dispatchSettings}
             showToast={showToast}
           />
@@ -1347,7 +1353,7 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
 // ==========================================
 
 // Gate: shows PIN login or authenticated rides view
-function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances, dispatchSettings, showToast }) {
+function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances, rickshawAreaRates, dispatchSettings, showToast }) {
   if (!ridesUser) {
     return <RidesPinLogin riders={riders} onLogin={setRidesUser} showToast={showToast} />;
   }
@@ -1364,8 +1370,8 @@ function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances,
         </button>
       </div>
       {isAdmin
-        ? <AdminRidesView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
-        : <RiderView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+        ? <AdminRidesView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} rickshawAreaRates={rickshawAreaRates} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
+        : <RiderView dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} rickshawAreaRates={rickshawAreaRates} dispatchSettings={dispatchSettings} showToast={showToast} ridesUser={ridesUser} />
       }
     </div>
   );
@@ -1607,7 +1613,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   );
 }
 
-function RiderView({ dispatches, riders, riderAdvances, dispatchSettings, showToast, ridesUser }) {
+function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('mypay');
   const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
   const isBykea = ridesUser.roles?.includes('bykea_manager');
@@ -1621,8 +1627,8 @@ function RiderView({ dispatches, riders, riderAdvances, dispatchSettings, showTo
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
       {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
-      {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
-      {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
     </div>
   );
@@ -1904,7 +1910,7 @@ function ScrollTabs({ tabs, active, onChange }) {
   );
 }
 
-function AdminRidesView({ dispatches, riders, riderAdvances, dispatchSettings, showToast, ridesUser }) {
+function AdminRidesView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('dashboard');
   const TABS = [['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']];
 
@@ -1912,12 +1918,12 @@ function AdminRidesView({ dispatches, riders, riderAdvances, dispatchSettings, s
     <div className="space-y-4">
       <ScrollTabs tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
-      {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
+      {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
       {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
       {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
       {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} showToast={showToast} />}
       {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
-      {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} showToast={showToast} />}
+      {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} />}
     </div>
   );
 }
@@ -2158,7 +2164,7 @@ function AreaPicker({ value, onChange, inputCls, labelCls, toCustom, setToCustom
   );
 }
 
-function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], showToast, onDone, isAdmin = false }) {
+function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], rickshawAreaRates = [], showToast, onDone, isAdmin = false }) {
   const today = getLocalDateStr();
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -2299,9 +2305,41 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
           {from === 'custom' && <input className={`${inputCls} mt-2`} placeholder="Enter address..." value={fromCustom} onChange={e => setFromCustom(e.target.value)} />}
         </div>
 
-        {/* To Area */}
-        <AreaPicker value={toArea} onChange={setToArea} inputCls={inputCls} labelCls={labelCls}
-          toCustom={toCustom} setToCustom={setToCustom} />
+        {/* To Area — rickshaw gets Urdu quick-select panel, others get standard picker */}
+        {selRiderType === 'rickshaw' && rickshawAreaRates.length > 0 ? (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-black text-amber-700" style={{fontFamily:'serif'}}>🟡 محفوظ علاقے</span>
+              <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Saved Areas</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {rickshawAreaRates.map(r => (
+                <button key={r.id} type="button" onClick={() => {
+                  setToArea(r.area); setToCustom('');
+                  setFarePerUnit(r.farePerRickshaw.toString());
+                  setFinalFare((r.farePerRickshaw * rickshawCount).toString());
+                }}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all active:scale-95 ${toArea === r.area ? 'bg-amber-500 border-amber-500' : 'bg-white border-amber-200'}`}>
+                  <div className={`font-black text-sm ${toArea === r.area ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
+                  <div className={`text-[10px] font-black mt-0.5 ${toArea === r.area ? 'text-amber-100' : 'text-amber-600'}`}>
+                    Rs.{(r.farePerRickshaw || 0).toLocaleString()} <span style={{fontFamily:'serif'}}>فی رکشہ</span>
+                  </div>
+                  {r.notes && <div className={`text-[8px] font-bold mt-0.5 ${toArea === r.area ? 'text-amber-200' : 'text-slate-400'}`}>{r.notes}</div>}
+                </button>
+              ))}
+            </div>
+            <div>
+              <div className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                <span>Other / دیگر علاقہ</span>
+                {toArea && !rickshawAreaRates.find(r => r.area === toArea) && <span className="text-amber-500">✓ {toArea}</span>}
+              </div>
+              <AreaPicker value={rickshawAreaRates.find(r => r.area === toArea) ? '' : toArea} onChange={v => { setToArea(v); setToCustom(''); }} inputCls={inputCls} labelCls={''} toCustom={toCustom} setToCustom={setToCustom} />
+            </div>
+          </div>
+        ) : (
+          <AreaPicker value={toArea} onChange={setToArea} inputCls={inputCls} labelCls={labelCls}
+            toCustom={toCustom} setToCustom={setToCustom} />
+        )}
 
         {/* Party Name */}
         <div>
@@ -2343,7 +2381,9 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
         {/* Rickshaw count */}
         {selRiderType === 'rickshaw' && (
           <div>
-            <label className={labelCls}>Rickshaw Count</label>
+            <label className={labelCls}>
+              رکشہ تعداد &nbsp;·&nbsp; Rickshaw Count
+            </label>
             <div className="flex gap-2">
               {[1,2,3,4].map(n => (
                 <button key={n} onClick={() => setRickshawCount(n)}
@@ -2382,12 +2422,14 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], sho
             </div>
             {selRiderType === 'rickshaw' && (
               <div>
-                <label className={labelCls}>Fare per Rickshaw (Rs.)</label>
+                <label className={labelCls}>کرایہ فی رکشہ &nbsp;·&nbsp; Fare per Rickshaw (Rs.)</label>
                 <input type="number" value={farePerUnit} onChange={e => setFarePerUnit(e.target.value)} className={inputCls} />
               </div>
             )}
             <div>
-              <label className={labelCls}>Final Fare (Rs.) {selRiderType === 'rickshaw' ? `× ${rickshawCount} = Total` : ''}</label>
+              <label className={labelCls}>
+                {selRiderType === 'rickshaw' ? `کل کرایہ · Total Fare × ${rickshawCount} رکشہ` : 'Final Fare (Rs.)'}
+              </label>
               <input type="number" value={finalFare} onChange={e => setFinalFare(e.target.value)} className={`${inputCls} text-blue-700 font-black text-lg`} />
             </div>
           </div>
@@ -3200,7 +3242,70 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
 }
 
 // Rides Settings
-function RidesSettings({ dispatchSettings, showToast }) {
+function RickshawRatesManager({ rickshawAreaRates, showToast }) {
+  const [area, setArea]   = useState('');
+  const [fare, setFare]   = useState('');
+  const [notes, setNotes] = useState('');
+  const inp = 'bg-white border-2 border-amber-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900 w-full';
+
+  const save = async () => {
+    if (!area.trim() || !fare) { showToast('علاقہ اور کرایہ درج کریں', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}`), {
+      area: area.trim(), farePerRickshaw: parseFloat(fare) || 0, notes: notes.trim(), createdAt: Date.now(),
+    });
+    setArea(''); setFare(''); setNotes('');
+    showToast('Rate saved ✓');
+  };
+
+  const del = async (id) => {
+    if (!window.confirm('Delete this rate?')) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', id));
+    showToast('Deleted');
+  };
+
+  return (
+    <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>رکشہ کرایہ</span>
+        <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Rickshaw Fixed Rates</span>
+      </div>
+
+      {/* Add form */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <input placeholder="علاقہ / Area name" value={area} onChange={e => setArea(e.target.value)} className={inp} />
+          <input type="number" placeholder="کرایہ / Fare (Rs.)" value={fare} onChange={e => setFare(e.target.value)} className={inp} />
+        </div>
+        <input placeholder="نوٹ / Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} className={inp} />
+        <button onClick={save}
+          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all">
+          + شامل کریں / Add Rate
+        </button>
+      </div>
+
+      {/* Saved rates list */}
+      {rickshawAreaRates.length === 0
+        ? <div className="text-center text-amber-500 text-[10px] font-bold py-2">کوئی محفوظ علاقہ نہیں / No rates saved yet</div>
+        : <div className="space-y-2">
+            {rickshawAreaRates.map(r => (
+              <div key={r.id} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
+                <div>
+                  <div className="font-black text-slate-800">{r.area}</div>
+                  <div className="text-[10px] font-black text-amber-600">
+                    Rs.{(r.farePerRickshaw || 0).toLocaleString()} <span style={{fontFamily:'serif'}}>فی رکشہ</span>
+                    {r.notes && <span className="text-slate-400 font-bold"> · {r.notes}</span>}
+                  </div>
+                </div>
+                <button onClick={() => del(r.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
+              </div>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
+function RidesSettings({ dispatchSettings, rickshawAreaRates, showToast }) {
   const [bikeRate, setBikeRate] = useState(dispatchSettings.bikeRate || 55);
   const [rickshawRate, setRickshawRate] = useState(dispatchSettings.rickshawRate || 55);
 
@@ -3227,6 +3332,8 @@ function RidesSettings({ dispatchSettings, showToast }) {
         </div>
         <button onClick={save} className="w-full bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs">Save Rates</button>
       </div>
+
+      <RickshawRatesManager rickshawAreaRates={rickshawAreaRates || []} showToast={showToast} />
 
       <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 text-[10px] font-bold text-slate-500 space-y-1">
         <div className="font-black text-slate-700 uppercase tracking-widest text-[9px] mb-2">Origins</div>
