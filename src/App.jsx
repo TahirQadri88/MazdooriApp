@@ -3242,65 +3242,191 @@ function RiderProfileCard({ rider: r, dispatches, showToast }) {
 }
 
 // Rides Settings
+const RICKSHAW_TEMPLATE_AREAS = [
+  // Bhains Colony
+  { area: 'Bhains Colony', notes: 'Landhi' },
+  // Super Highway
+  { area: 'Jameel Memon Society (S/W)', notes: 'Super Highway' },
+  { area: '52 Acre Scheme (S/W)', notes: 'Super Highway' },
+  { area: 'Nagori Society (S/W)', notes: 'Super Highway' },
+  { area: 'Areesha Cattle Society (S/W)', notes: 'Super Highway' },
+  { area: 'Karachi Dairy & Cattle City (S/W)', notes: 'Super Highway' },
+  { area: 'Dumba Goth (S/W)', notes: 'Super Highway' },
+  { area: 'Ramzan Piri (S/W)', notes: 'Super Highway' },
+  { area: 'Solangi Stop (S/W)', notes: 'Super Highway' },
+  { area: 'Hashim Goth (S/W)', notes: 'Super Highway' },
+  // Gadap
+  { area: 'Abdullah Hotel — Gadap', notes: 'Gadap' },
+  { area: 'TOMCL — Organic Meat Co. Gadap', notes: 'Gadap' },
+  { area: 'Jumani Goth — Gadap', notes: 'Gadap' },
+  { area: 'GFA Farms — Gadap', notes: 'Gadap' },
+  // Landhi
+  { area: 'Khurram Abad — Landhi', notes: 'Landhi' },
+  { area: 'Army Land — Landhi', notes: 'Landhi' },
+  { area: 'Navy Land — Landhi', notes: 'Landhi' },
+  { area: 'Babar Market — Landhi', notes: 'Landhi' },
+  // Gulberg
+  { area: 'Piyala Hotel — Gulberg', notes: 'Gulberg' },
+  // Orangi
+  { area: 'Orangi Town', notes: '' },
+  // Saddar
+  { area: 'Cantt Train Station — Saddar', notes: 'Saddar' },
+  { area: 'Daewoo Terminal — Saddar', notes: 'Saddar' },
+  { area: 'Shalimar Terminal — Saddar', notes: 'Saddar' },
+  { area: 'Faisal Movers — Saddar', notes: 'Saddar' },
+  { area: 'Intercity Bus Terminal — Saddar', notes: 'Saddar' },
+  // Goods Transport
+  { area: 'Kharadar Transport Area', notes: 'Goods Transport' },
+  { area: 'Maripur / Hawksbay', notes: 'Goods Transport' },
+  // DHA
+  { area: 'DHA Phase 1', notes: 'DHA' },
+  { area: 'DHA Phase 2', notes: 'DHA' },
+  { area: 'DHA Phase 3', notes: 'DHA' },
+  { area: 'DHA Phase 4', notes: 'DHA' },
+  { area: 'DHA Phase 5', notes: 'DHA' },
+  { area: 'DHA Phase 6', notes: 'DHA' },
+  { area: 'DHA Phase 7', notes: 'DHA' },
+  { area: 'DHA Phase 8', notes: 'DHA' },
+  { area: 'DHA City (Phase 9)', notes: 'DHA' },
+  // Regular Routes
+  { area: 'R17 Warehouse → Khyber Shop (Stock Transfer)', notes: 'Regular Route' },
+  { area: 'Sohrab Goth Bus Adda → R17 Warehouse', notes: 'Regular Route' },
+  // Other
+  { area: 'Naval Colony', notes: '' },
+  { area: 'Mach Goth', notes: '' },
+  { area: 'Mangopir', notes: '' },
+];
+
+function RickshawRateRow({ r, showToast }) {
+  const [fare, setFare] = useState((r.farePerRickshaw || '').toString());
+
+  const save = async () => {
+    const amt = parseFloat(fare) || 0;
+    if (amt === (r.farePerRickshaw || 0)) return;
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id), { farePerRickshaw: amt });
+    showToast(`${r.area} — Rs.${amt} saved`);
+  };
+
+  const del = async () => {
+    if (!window.confirm(`Delete "${r.area}"?`)) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id));
+  };
+
+  return (
+    <div className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="font-black text-slate-800 text-sm truncate">{r.area}</div>
+        {r.notes && <div className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{r.notes}</div>}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-[10px] font-black text-slate-400">Rs.</span>
+        <input
+          type="number" value={fare}
+          onChange={e => setFare(e.target.value)}
+          onBlur={save}
+          onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+          placeholder="0"
+          className="w-20 bg-amber-50 border-2 border-amber-200 p-1.5 rounded-xl font-black text-amber-700 text-sm text-right outline-none focus:border-amber-500"
+        />
+      </div>
+      <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
+    </div>
+  );
+}
+
 function RickshawRatesManager({ rickshawAreaRates, showToast }) {
   const [area, setArea]   = useState('');
   const [fare, setFare]   = useState('');
   const [notes, setNotes] = useState('');
+  const [seeding, setSeeding] = useState(false);
   const inp = 'bg-white border-2 border-amber-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900 w-full';
 
-  const save = async () => {
-    if (!area.trim() || !fare) { showToast('علاقہ اور کرایہ درج کریں', 'error'); return; }
+  const addOne = async () => {
+    if (!area.trim()) { showToast('علاقہ درج کریں / Enter area name', 'error'); return; }
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}`), {
       area: area.trim(), farePerRickshaw: parseFloat(fare) || 0, notes: notes.trim(), createdAt: Date.now(),
     });
     setArea(''); setFare(''); setNotes('');
-    showToast('Rate saved ✓');
+    showToast('Area added');
   };
 
-  const del = async (id) => {
-    if (!window.confirm('Delete this rate?')) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', id));
-    showToast('Deleted');
+  const seedDefaults = async () => {
+    const existing = new Set(rickshawAreaRates.map(r => r.area));
+    const toAdd = RICKSHAW_TEMPLATE_AREAS.filter(t => !existing.has(t.area));
+    if (!toAdd.length) { showToast('All default areas already added'); return; }
+    setSeeding(true);
+    const batch = writeBatch(db);
+    toAdd.forEach(t => {
+      const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}_${Math.random().toString(36).slice(2,7)}`);
+      batch.set(ref, { area: t.area, farePerRickshaw: 0, notes: t.notes, createdAt: Date.now() });
+    });
+    await batch.commit();
+    setSeeding(false);
+    showToast(`${toAdd.length} علاقے شامل ہوئے / areas added — enter fares below`);
   };
+
+  // Group areas by notes category
+  const grouped = rickshawAreaRates.reduce((acc, r) => {
+    const key = r.notes || 'دیگر / Other';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+  const groups = Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b));
 
   return (
     <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>رکشہ کرایہ</span>
         <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Rickshaw Fixed Rates</span>
       </div>
 
-      {/* Add form */}
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <input placeholder="علاقہ / Area name" value={area} onChange={e => setArea(e.target.value)} className={inp} />
-          <input type="number" placeholder="کرایہ / Fare (Rs.)" value={fare} onChange={e => setFare(e.target.value)} className={inp} />
-        </div>
-        <input placeholder="نوٹ / Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} className={inp} />
-        <button onClick={save}
-          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all">
-          + شامل کریں / Add Rate
-        </button>
+      {/* Seed button */}
+      <button onClick={seedDefaults} disabled={seeding}
+        className="w-full bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+        {seeding ? <RefreshCw size={13} className="animate-spin"/> : <DownloadCloud size={13}/>}
+        {seeding ? 'Loading...' : 'Load Default Areas (علاقے لوڈ کریں)'}
+      </button>
+      <div className="text-[9px] text-amber-600 font-bold text-center -mt-2">
+        Tap to load all preset areas with Rs.0 — then enter fares per area below
       </div>
 
-      {/* Saved rates list */}
-      {rickshawAreaRates.length === 0
-        ? <div className="text-center text-amber-500 text-[10px] font-bold py-2">کوئی محفوظ علاقہ نہیں / No rates saved yet</div>
-        : <div className="space-y-2">
-            {rickshawAreaRates.map(r => (
-              <div key={r.id} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
-                <div>
-                  <div className="font-black text-slate-800">{r.area}</div>
-                  <div className="text-[10px] font-black text-amber-600">
-                    Rs.{(r.farePerRickshaw || 0).toLocaleString()} <span style={{fontFamily:'serif'}}>فی رکشہ</span>
-                    {r.notes && <span className="text-slate-400 font-bold"> · {r.notes}</span>}
-                  </div>
-                </div>
-                <button onClick={() => del(r.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
-              </div>
-            ))}
+      {/* Add custom area */}
+      <div className="bg-white border-2 border-amber-100 rounded-2xl p-3 space-y-2">
+        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">+ Custom Area</div>
+        <div className="grid grid-cols-2 gap-2">
+          <input placeholder="Area name" value={area} onChange={e => setArea(e.target.value)} className={inp} />
+          <input type="number" placeholder="Fare Rs." value={fare} onChange={e => setFare(e.target.value)} className={inp} />
+        </div>
+        <div className="flex gap-2">
+          <input placeholder="Category / Notes" value={notes} onChange={e => setNotes(e.target.value)} className={`flex-1 ${inp}`} />
+          <button onClick={addOne} className="bg-amber-500 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all">Add</button>
+        </div>
+      </div>
+
+      {/* Grouped rate list */}
+      {groups.length === 0
+        ? <div className="text-center text-amber-500 text-[10px] font-bold py-4">
+            No rates yet — tap "Load Default Areas" above
           </div>
+        : groups.map(([category, items]) => (
+            <div key={category} className="space-y-1.5">
+              <div className="text-[9px] font-black text-amber-700 uppercase tracking-widest px-1 flex items-center gap-2">
+                <span>{category}</span>
+                <span className="text-amber-400">({items.length})</span>
+              </div>
+              {items.map(r => <RickshawRateRow key={r.id} r={r} showToast={showToast} />)}
+            </div>
+          ))
       }
+
+      {groups.length > 0 && (
+        <div className="text-[9px] text-amber-500 font-bold text-center pt-1">
+          کرایہ بدلنے کے لیے Rs. باکس میں لکھیں اور Enter دبائیں
+          <br/>Tap a fare field, type the amount, press Enter to save
+        </div>
+      )}
     </div>
   );
 }
