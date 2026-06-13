@@ -270,7 +270,11 @@ const resolveCat = (log, categories) => {
 // --- MAIN APPLICATION ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    return ['home','entry','reports','rides','admin'].includes(hash) ? hash : 'home';
+  });
+  const goTab = (tab) => { setActiveTab(tab); window.history.replaceState(null, '', '#' + tab); };
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -433,7 +437,7 @@ export default function App() {
            <AdminAuthView correctPass={adminPass} onUnlock={() => setIsAdminUnlocked(true)} showToast={showToast} />
         )}
         {activeTab === 'admin' && isAdminUnlocked && (
-           <AdminView categories={categories} logs={logs} payments={payments} adminPass={adminPass} showToast={showToast} backups={backups} />
+           <AdminView categories={categories} logs={logs} payments={payments} adminPass={adminPass} showToast={showToast} backups={backups} riders={riders} dispatches={dispatches} riderAdvances={riderAdvances} rickshawAreaRates={rickshawAreaRates} />
         )}
         {activeTab === 'rides' && (
           <RidesGate
@@ -448,11 +452,11 @@ export default function App() {
 
       <nav className="fixed bottom-0 w-full bg-white border-t-2 border-slate-200 p-3 z-40 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
         <div className="max-w-md mx-auto flex justify-around">
-          <NavItem icon={<HomeIcon size={22} />} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
-          <NavItem icon={<PlusSquare size={22} />} label="Entry" active={activeTab === 'entry'} onClick={() => setActiveTab('entry')} />
-          <NavItem icon={<FileText size={22} />} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-          <NavItem icon={<Truck size={22} />} label="Rides" active={activeTab === 'rides'} onClick={() => setActiveTab('rides')} />
-          <NavItem icon={<Settings size={22} />} label="Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
+          <NavItem icon={<HomeIcon size={22} />} label="Home" active={activeTab === 'home'} onClick={() => goTab('home')} />
+          <NavItem icon={<PlusSquare size={22} />} label="Entry" active={activeTab === 'entry'} onClick={() => goTab('entry')} />
+          <NavItem icon={<FileText size={22} />} label="Reports" active={activeTab === 'reports'} onClick={() => goTab('reports')} />
+          <NavItem icon={<Truck size={22} />} label="Rides" active={activeTab === 'rides'} onClick={() => goTab('rides')} />
+          <NavItem icon={<Settings size={22} />} label="Admin" active={activeTab === 'admin'} onClick={() => goTab('admin')} />
         </div>
       </nav>
     </div>
@@ -1073,7 +1077,7 @@ function AdminAuthView({ correctPass, onUnlock, showToast }) {
 // ==========================================
 // 5. SECURE ADMIN VIEW
 // ==========================================
-function AdminView({ categories, showToast, logs, payments, adminPass, backups }) {
+function AdminView({ categories, showToast, logs, payments, adminPass, backups, riders, dispatches, riderAdvances, rickshawAreaRates }) {
   const [n, setN] = useState('');
   const [g, setG] = useState('Labour');
   const [r, setR] = useState('');
@@ -1199,19 +1203,27 @@ function AdminView({ categories, showToast, logs, payments, adminPass, backups }
       label: `Backup ${fmtDate(getLocalDateStr())}`,
       categories,
       logs,
-      payments
+      payments,
+      riders: riders || [],
+      dispatches: dispatches || [],
+      riderAdvances: riderAdvances || [],
+      rickshawAreaRates: rickshawAreaRates || [],
     });
     showToast("Cloud Backup Created!");
   };
 
   const restoreFromBackup = async (backup) => {
-    if (!window.confirm(`Restore from backup dated ${fmtDate(backup.createdAt)}?\n\nThis will overwrite ALL current categories, logs, and payments with the backup data.`)) return;
+    if (!window.confirm(`Restore from backup dated ${fmtDate(backup.createdAt)}?\n\nThis will overwrite categories, logs, payments, riders, dispatches, advances, and rickshaw rates with the backup data.`)) return;
     const batch = writeBatch(db);
     if (backup.categories) backup.categories.forEach(c => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'categories', c.id), c));
     if (backup.logs) backup.logs.forEach(l => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'logs', l.id), l));
     if (backup.payments) backup.payments.forEach(p => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'payments', p.id), p));
+    if (backup.riders) backup.riders.forEach(r => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'riders', r.id), r));
+    if (backup.dispatches) backup.dispatches.forEach(d => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), d));
+    if (backup.riderAdvances) backup.riderAdvances.forEach(a => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', a.id), a));
+    if (backup.rickshawAreaRates) backup.rickshawAreaRates.forEach(r => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id), r));
     await batch.commit();
-    showToast("Backup Restored to Cloud!");
+    showToast("Backup Restored!");
   };
 
   const deleteBackup = async (backupId) => {
