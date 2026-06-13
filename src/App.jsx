@@ -1440,44 +1440,35 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 
 function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd, totalAdv, netPayable }) {
   const today = getLocalDateStr();
-  const sep = '────────────────────────────────';
+  const sep = '─────────────────────────';
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   const tripLines = sorted.map((d, i) => {
-    const status = d.fareReceived ? '✅ Collected' : '⏳ Pending';
-    let line = `${i + 1}. ${d.partyName}  [${fmtDate(d.date)}]`
-      + `\n   📍 ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${status}`;
-    if (d.codAmount > 0) line += `\n   📦 COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '(Collected)' : '(Pending)'}`;
+    const st = d.fareReceived ? '✅' : '⏳';
+    let line = `${i + 1}. ${d.partyName} | ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${st} | ${fmtDate(d.date)}`;
+    if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
-  }).join('\n\n');
+  }).join('\n');
 
   const advLines = advEntries.length > 0
     ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a =>
-        `  ${a.type === 'payment' ? '✅ Payment' : '💰 Advance'}: Rs.${(a.amount || 0).toLocaleString()} — ${fmtDate(a.date)}${a.note ? ` (${a.note})` : ''}`
+        `${a.type === 'payment' ? '✅' : '💰'} Rs.${(a.amount || 0).toLocaleString()} | ${fmtDate(a.date)} | ${a.note || (a.type === 'payment' ? 'Payment' : 'Advance')}`
       ).join('\n')
-    : '  No entries';
+    : 'No entries';
 
-  return [
-    `📋 PAYMENT REPORT — Khyber Traders / AnimalHealth.pk`,
-    `Rider: ${riderName.toUpperCase()}`,
-    `Date: ${fmtDate(today)}`,
+  const parts = [
+    `📋 ${riderName.toUpperCase()} — Khyber Traders`,
+    `Date: ${fmtDate(today)} | Trips: ${tripList.length}`,
     sep,
-    `TRIPS (${tripList.length} finalized)`,
+    tripLines || 'No trips',
     sep,
-    tripLines || '  No trips',
-    sep,
-    `SUMMARY`,
-    `Total Trips    : ${tripList.length}`,
-    `Total Fare     : Rs.${totalFare.toLocaleString()}`,
-    `With Rider     : Rs.${fareRcvd.toLocaleString()}`,
-    `Pending        : Rs.${(totalFare - fareRcvd).toLocaleString()}`,
-    `Advance / Paid : Rs.${totalAdv.toLocaleString()}`,
-    sep,
-    `NET PAYABLE    : Rs.${netPayable.toLocaleString()}`,
-    sep,
-    `PAYMENT LEDGER`,
-    advLines,
-  ].join('\n');
+    `Fare: Rs.${totalFare.toLocaleString()} | With Rider: Rs.${fareRcvd.toLocaleString()} | Pending: Rs.${(totalFare - fareRcvd).toLocaleString()}`,
+    `Advance/Paid: Rs.${totalAdv.toLocaleString()} | *NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
+  ];
+  if (advEntries.length > 0) {
+    parts.push(sep, `Ledger:`, advLines);
+  }
+  return parts.join('\n');
 }
 
 // Rider view: only their own trips
