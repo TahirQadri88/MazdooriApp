@@ -1438,6 +1438,48 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
   );
 }
 
+/function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd, totalAdv, netPayable }) {
+  const today = getLocalDateStr();
+  const sep = '────────────────────────────────';
+  const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const tripLines = sorted.map((d, i) => {
+    const status = d.fareReceived ? '✅ Collected' : '⏳ Pending';
+    let line = `${i + 1}. ${d.partyName}  [${fmtDate(d.date)}]`
+      + `\n   📍 ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${status}`;
+    if (d.codAmount > 0) line += `\n   📦 COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '(Collected)' : '(Pending)'}`;
+    return line;
+  }).join('\n\n');
+
+  const advLines = advEntries.length > 0
+    ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a =>
+        `  ${a.type === 'payment' ? '✅ Payment' : '💰 Advance'}: Rs.${(a.amount || 0).toLocaleString()} — ${fmtDate(a.date)}${a.note ? ` (${a.note})` : ''}`
+      ).join('\n')
+    : '  No entries';
+
+  return [
+    `📋 PAYMENT REPORT — Khyber Traders / AnimalHealth.pk`,
+    `Rider: ${riderName.toUpperCase()}`,
+    `Date: ${fmtDate(today)}`,
+    sep,
+    `TRIPS (${tripList.length} finalized)`,
+    sep,
+    tripLines || '  No trips',
+    sep,
+    `SUMMARY`,
+    `Total Trips    : ${tripList.length}`,
+    `Total Fare     : Rs.${totalFare.toLocaleString()}`,
+    `With Rider     : Rs.${fareRcvd.toLocaleString()}`,
+    `Pending        : Rs.${(totalFare - fareRcvd).toLocaleString()}`,
+    `Advance / Paid : Rs.${totalAdv.toLocaleString()}`,
+    sep,
+    `NET PAYABLE    : Rs.${netPayable.toLocaleString()}`,
+    sep,
+    `PAYMENT LEDGER`,
+    advLines,
+  ].join('\n');
+}
+
 // Rider view: only their own trips
 function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const myFin          = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
@@ -1464,6 +1506,26 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         </div>
         {advance > 0 && <div className="text-[9px] font-bold text-slate-500 mt-1">Advance deducted: Rs.{advance.toLocaleString()}</div>}
       </div>
+
+      {/* Share report */}
+      {myFin.length > 0 && (
+        <button onClick={() => {
+          const text = buildRiderReport({
+            riderName: ridesUser.name,
+            tripList: myFin,
+            advEntries: myAdvances,
+            totalFare: totalEarned,
+            fareRcvd: alreadyWithMe,
+            totalAdv: advance,
+            netPayable: adminOwes,
+          });
+          if (navigator.share) navigator.share({ title: `My Pay Report — ${ridesUser.name}`, text });
+          else { navigator.clipboard.writeText(text); }
+        }}
+          className="w-full bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+          <Share2 size={14}/> Share My Report
+        </button>
+      )}
 
       {/* Breakdown */}
       <div className="grid grid-cols-3 gap-2">
@@ -1599,7 +1661,7 @@ function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
     const fareRcvd    = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
     const totalAdv    = advEntries.reduce((s, a) => s + (a.amount || 0), 0);
     const netPayable  = totalFare - fareRcvd - totalAdv;
-    return { rider: r, trips: trips.length, totalFare, fareRcvd, totalAdv, advEntries, netPayable };
+    return { rider: r, trips: trips.length, tripList: trips, totalFare, fareRcvd, totalAdv, advEntries, netPayable };
   }).filter(s => s.trips > 0 || s.totalAdv > 0);
 
   const grandTotal   = riderStats.reduce((s, r) => s + r.totalFare, 0);
@@ -1733,6 +1795,24 @@ function RiderPayCard({ s, showToast, lbl }) {
           className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
           <DollarSign size={14}/> Record Payment to {s.rider.name}
           {s.netPayable > 0 && <span className="bg-blue-600 px-2 py-0.5 rounded-lg">Rs.{s.netPayable.toLocaleString()}</span>}
+        </button>
+
+        {/* Share detailed trip report */}
+        <button onClick={() => {
+          const text = buildRiderReport({
+            riderName: s.rider.name,
+            tripList: s.tripList || [],
+            advEntries: s.advEntries || [],
+            totalFare: s.totalFare,
+            fareRcvd: s.fareRcvd,
+            totalAdv: s.totalAdv,
+            netPayable: s.netPayable,
+          });
+          if (navigator.share) navigator.share({ title: `Payment Report — ${s.rider.name}`, text });
+          else { navigator.clipboard.writeText(text); showToast('Report copied to clipboard'); }
+        }}
+          className="w-full bg-slate-600 hover:bg-slate-700 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+          <Share2 size={13}/> Share Trip Report
         </button>
 
         {showPay && (
