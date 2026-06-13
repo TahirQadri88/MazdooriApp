@@ -2348,6 +2348,15 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
               <AreaPicker value={rickshawAreaRates.find(r => r.area === toArea) ? '' : toArea} onChange={v => { setToArea(v); setToCustom(''); }} inputCls={inputCls} labelCls={''} toCustom={toCustom} setToCustom={setToCustom} />
             </div>
           </div>
+        ) : selRiderType === 'rickshaw' ? (
+          <div className="space-y-2">
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 text-center">
+              <div className="text-[10px] font-black text-amber-700">کوئی محفوظ علاقہ نہیں</div>
+              <div className="text-[9px] text-amber-600 font-bold mt-0.5">Settings → رکشہ کرایہ میں علاقے شامل کریں</div>
+            </div>
+            <AreaPicker value={toArea} onChange={setToArea} inputCls={inputCls} labelCls={labelCls}
+              toCustom={toCustom} setToCustom={setToCustom} />
+          </div>
         ) : (
           <AreaPicker value={toArea} onChange={setToArea} inputCls={inputCls} labelCls={labelCls}
             toCustom={toCustom} setToCustom={setToCustom} />
@@ -2355,8 +2364,11 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
 
         {/* Party Name */}
         <div>
-          <label className={labelCls}>Party Name</label>
-          <input value={partyName} onChange={e => setPartyName(e.target.value)} placeholder="e.g. Haji Saleem" className={inputCls} />
+          <label className={labelCls}>
+            {selRiderType === 'rickshaw' ? 'گاہک کا نام · Party Name' : 'Party Name'}
+          </label>
+          <input value={partyName} onChange={e => setPartyName(e.target.value)}
+            placeholder={selRiderType === 'rickshaw' ? 'مثال: حاجی سلیم' : 'e.g. Haji Saleem'} className={inputCls} />
         </div>
 
         {/* Rider Type */}
@@ -2409,7 +2421,9 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
 
         {/* Load Description */}
         <div>
-          <label className={labelCls}>Load Description</label>
+          <label className={labelCls}>
+            {selRiderType === 'rickshaw' ? 'بوجھ کی تفصیل · Load Description' : 'Load Description'}
+          </label>
           <input value={loadDesc} onChange={e => setLoadDesc(e.target.value)} placeholder="e.g. 3 boxes heavy gold" className={inputCls} />
         </div>
 
