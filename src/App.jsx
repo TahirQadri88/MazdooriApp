@@ -1438,7 +1438,7 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
   );
 }
 
-/function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd, totalAdv, netPayable }) {
+function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd, totalAdv, netPayable }) {
   const today = getLocalDateStr();
   const sep = '────────────────────────────────';
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
