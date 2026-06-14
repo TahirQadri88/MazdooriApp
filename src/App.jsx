@@ -1371,15 +1371,16 @@ function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances,
     return <RidesPinLogin riders={riders} onLogin={setRidesUser} showToast={showToast} />;
   }
   const isAdmin = ridesUser.roles.includes('admin');
+  const isRickshawUser = ridesUser.type === 'rickshaw';
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      <div className="flex justify-between items-center">
-        <div>
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Logged in as</span>
+      <div className={`flex justify-between items-center ${isRickshawUser ? 'flex-row-reverse' : ''}`}>
+        <div className={isRickshawUser ? 'text-right' : ''}>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{isRickshawUser ? 'لاگ ان' : 'Logged in as'}</span>
           <div className="font-black text-blue-700 uppercase text-sm">{ridesUser.name}</div>
         </div>
         <button onClick={() => setRidesUser(null)} className="flex items-center gap-1 text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest">
-          <LogOut size={12} /> Logout
+          <LogOut size={12} /> {isRickshawUser ? 'خارج' : 'Logout'}
         </button>
       </div>
       {isAdmin
@@ -1526,12 +1527,12 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {/* Balance card */}
       <div className={`p-5 rounded-3xl border-2 shadow-sm text-center ${adminOwes > 0 ? 'bg-blue-50 border-blue-200' : adminOwes < 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
         {isRickshaw && (
-          <div className="text-base font-black text-slate-600 mb-2" style={{fontFamily:'serif'}}>{ridesUser.name}</div>
+          <div className="text-base font-black text-slate-600 mb-2" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{ridesUser.name}</div>
         )}
         {adminOwes === 0 ? (
           <div className="py-1">
             <div className="text-3xl mb-1">✓</div>
-            <div className="font-black text-lg text-emerald-700" style={isRickshaw ? {fontFamily:'serif'} : {}}>
+            <div className="font-black text-lg text-emerald-700" style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
               {t('All Settled', 'حساب صاف')}
             </div>
             <div className="text-[9px] font-bold text-emerald-500 mt-1">
@@ -1591,7 +1592,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {myPending.length > 0 && (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-black text-amber-700 flex items-center gap-1 text-sm" style={isRickshaw ? {fontFamily:'serif'} : {}}>
+            <span className="font-black text-amber-700 flex items-center gap-1 text-sm" style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
               <Clock size={14}/> {t('Pending Review', 'جائزے میں — ابھی تصدیق نہیں')}
             </span>
             <span className="text-[10px] font-black text-amber-600 bg-amber-200 px-2 py-0.5 rounded-full">
@@ -1601,9 +1602,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           {myPending.map(d => (
             <div key={d.id} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
-                <div className="font-black text-slate-800 text-sm">{d.toArea}</div>
+                <div className="font-black text-slate-800 text-sm" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{URDU_AREA_NAMES[d.toArea] || d.toArea}</div>
                 <div className="text-[9px] font-bold text-amber-500">
-                  {d.tripCount > 1 ? `${d.tripCount} رائڈز` : '1 رائڈ'} · {fmtDate(d.date)}
+                  {d.tripCount > 1 ? `${d.tripCount} رائڈز` : '۱ رائڈ'} · {fmtDate(d.date)}
                 </div>
               </div>
               <div className="text-right">
@@ -1612,14 +1613,14 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
               </div>
             </div>
           ))}
-          <div className="text-[9px] text-amber-600 font-bold text-center pt-1" style={isRickshaw ? {fontFamily:'serif'} : {}}>
-            {t('Will be included after admin approval', 'Admin تصدیق کے بعد کرایہ شامل ہوگا')}
+          <div className="text-[9px] text-amber-600 font-bold text-center pt-1" style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
+            {t('Will be included after admin approval', 'ادارے کی تصدیق کے بعد کرایہ شامل ہوگا')}
           </div>
         </div>
       )}
 
       {/* Breakdown */}
-      <div className="grid grid-cols-3 gap-2">
+      {(totalEarned > 0 || alreadyWithMe > 0 || advance > 0) && <div className="grid grid-cols-3 gap-2">
         <div className="bg-white border-2 border-slate-100 p-3 rounded-2xl text-center shadow-sm">
           <div className={`${lbl} text-slate-600 mb-1`}>{t('Total Earned', 'کل کرایہ')}</div>
           <div className="font-black text-slate-700 text-sm">Rs.{totalEarned.toLocaleString()}</div>
@@ -1634,7 +1635,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           <div className={`${lbl} text-amber-600 mb-1`}>{t('Advance', 'ایڈوانس')}</div>
           <div className="font-black text-amber-700 text-sm">Rs.{advance.toLocaleString()}</div>
         </div>
-      </div>
+      </div>}
 
       {/* Unpaid trips */}
       {periodUnpaid.length > 0 && (
@@ -1884,7 +1885,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
             {sel.count}
           </span>
         )}
-        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`} style={{fontFamily:'serif'}}>
+        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`} style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
           {urduName || r.area}
         </div>
         {urduName && (
@@ -1903,7 +1904,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
     <div className="space-y-4 pb-10">
       <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4">
         <div className="text-center">
-          <div className="text-2xl font-black text-amber-700" style={{fontFamily:'serif'}}>جائزہ</div>
+          <div className="text-2xl font-black text-amber-700" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>جائزہ</div>
           <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Review Before Submit</div>
         </div>
         <div className="grid grid-cols-2 gap-2 text-center">
@@ -1974,7 +1975,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {/* Section header */}
       <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex items-center justify-between">
         <div>
-          <div className="text-lg font-black text-amber-800" style={{fontFamily:'serif'}}>علاقہ کا انتخاب کریں</div>
+          <div className="text-lg font-black text-amber-800" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>علاقہ کا انتخاب کریں</div>
           <div className="text-[9px] font-bold text-amber-500">ایک بار ٹیپ = ایک رائڈ</div>
         </div>
         {basket.length > 0 && (
@@ -2007,7 +2008,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {/* Area buttons */}
       {rickshawAreaRates.length === 0 ? (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center space-y-1">
-          <div className="text-sm font-black text-amber-700" style={{fontFamily:'serif'}}>کوئی علاقہ نہیں</div>
+          <div className="text-sm font-black text-amber-700" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>کوئی علاقہ نہیں</div>
           <div className="text-[9px] text-amber-600 font-bold">Admin → Settings → رکشہ کرایہ میں علاقے شامل کریں</div>
         </div>
       ) : searchTerm ? (
@@ -2031,7 +2032,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
               onClick={() => toggleCat(cat)}
               className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isOpen ? 'bg-amber-50' : 'bg-white'}`}>
               <div className="flex items-center gap-2 min-w-0">
-                <div className="text-sm font-black text-slate-800" style={{fontFamily:'serif'}}>
+                <div className="text-sm font-black text-slate-800" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
                   {URDU_CAT[cat] || cat}
                 </div>
                 <div className="text-[8px] font-bold text-amber-400 shrink-0">{areas.length} علاقے</div>
@@ -2056,7 +2057,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
 
       {/* Custom area */}
       <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-3 space-y-2">
-        <div className="text-sm font-black text-slate-600" style={{fontFamily:'serif'}}>+ الگ علاقہ</div>
+        <div className="text-sm font-black text-slate-600" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>+ الگ علاقہ</div>
         <div className="text-[9px] font-bold text-amber-500">فہرست میں نہ ہو تو یہاں لکھیں</div>
         <div className="flex gap-2">
           <input placeholder="علاقہ کا نام..." value={customArea} onChange={e => setCustomArea(e.target.value)}
@@ -2072,7 +2073,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {basket.length > 0 && (
         <div className="bg-white border-2 border-emerald-300 rounded-3xl p-4 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-black text-emerald-800" style={{fontFamily:'serif'}}>چنے ہوئے علاقے</span>
+            <span className="text-sm font-black text-emerald-800" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>چنے ہوئے علاقے</span>
             <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               {totalTrips === 1 ? '1 رائڈ' : `${totalTrips} رائڈز`} · Rs.{totalFare.toLocaleString()}
             </span>
@@ -2095,7 +2096,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
           ))}
           <button onClick={() => setStep('review')}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-base active:scale-95 transition-all flex items-center justify-center gap-2"
-            style={{fontFamily:'serif'}}>
+            style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
             <Check size={20}/> جائزہ لیں — Rs.{totalFare.toLocaleString()}
           </button>
         </div>
@@ -2809,7 +2810,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
         {selRiderType === 'rickshaw' && rickshawAreaRates.length > 0 ? (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-black text-amber-700" style={{fontFamily:'serif'}}>🟡 محفوظ علاقے</span>
+              <span className="text-lg font-black text-amber-700" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>🟡 محفوظ علاقے</span>
               <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Saved Areas</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -2822,7 +2823,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
                   className={`p-3 rounded-2xl border-2 text-left transition-all active:scale-95 ${toArea === r.area ? 'bg-amber-500 border-amber-500' : 'bg-white border-amber-200'}`}>
                   <div className={`font-black text-sm ${toArea === r.area ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
                   <div className={`text-[10px] font-black mt-0.5 ${toArea === r.area ? 'text-amber-100' : 'text-amber-600'}`}>
-                    Rs.{(r.farePerRickshaw || 0).toLocaleString()} <span style={{fontFamily:'serif'}}>فی رکشہ</span>
+                    Rs.{(r.farePerRickshaw || 0).toLocaleString()} <span style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>فی رکشہ</span>
                   </div>
                   {r.notes && <div className={`text-[8px] font-bold mt-0.5 ${toArea === r.area ? 'text-amber-200' : 'text-slate-400'}`}>{r.notes}</div>}
                 </button>
@@ -3006,6 +3007,7 @@ function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
   const [filter, setFilter] = useState('all');
   const today = getLocalDateStr();
   const weekStart = getWeekRange().start;
+  const isRickshaw = ridesUser?.type === 'rickshaw';
 
   const filtered = dispatches.filter(d => {
     if (filter === 'today') return d.date === today;
@@ -3014,10 +3016,14 @@ function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
     return true;
   });
 
+  const filterLabels = isRickshaw
+    ? [['all','سب'],['today','آج'],['week','اس ہفتے'],['cod','COD باقی']]
+    : [['all','All'],['today','Today'],['week','This Week'],['cod','COD Pending']];
+
   return (
-    <div className="space-y-3 pb-10">
+    <div className="space-y-3 pb-10" dir={isRickshaw ? 'rtl' : undefined}>
       <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-        {[['all','All'],['today','Today'],['week','This Week'],['cod','COD Pending']].map(([k,l]) => (
+        {filterLabels.map(([k,l]) => (
           <button key={k} onClick={() => setFilter(k)}
             className={`shrink-0 px-3 py-2 text-[9px] font-black uppercase rounded-lg border-2 transition-all ${filter === k ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
             {l}
@@ -3119,34 +3125,45 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
     else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
   };
 
+  const isRickshawCard = d.riderType === 'rickshaw';
   const statusColor = d.entryStatus === 'finalized' ? 'text-emerald-600' : d.entryStatus === 'rejected' ? 'text-red-500' : 'text-amber-600';
+  const statusUrdu = d.entryStatus === 'finalized' ? 'منظور' : d.entryStatus === 'rejected' ? 'مسترد' : 'انتظار';
   const inp = "w-full bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-500 text-slate-900";
+  const urduArea = URDU_AREA_NAMES[d.toArea];
 
   return (
     <div className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${m.border}`}>
-      <button onClick={() => { setExpanded(!expanded); setEditing(false); }} className="w-full p-4 text-left">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-3 min-w-0">
+      <button onClick={() => { setExpanded(!expanded); setEditing(false); }} className={`w-full p-4 ${isRickshawCard ? 'text-right' : 'text-left'}`}>
+        <div className={`flex justify-between items-start ${isRickshawCard ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-start gap-3 min-w-0 ${isRickshawCard ? 'flex-row-reverse' : ''}`}>
             <span className={`w-3 h-3 rounded-full mt-1 shrink-0 ${m.dot}`}></span>
             <div className="min-w-0">
-              <div className="font-black text-slate-900 uppercase truncate">
-                {d.partyName || d.toArea}
+              <div className={`font-black text-slate-900 truncate ${isRickshawCard ? '' : 'uppercase'}`}
+                style={isRickshawCard ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
+                {isRickshawCard ? (urduArea || d.toArea) : (d.partyName || d.toArea)}
               </div>
+              {isRickshawCard && urduArea && (
+                <div className="text-[8px] text-amber-500 font-bold mt-0.5">{d.toArea}</div>
+              )}
               <div className="text-[10px] font-bold text-slate-500 mt-0.5">
-                {d.partyName ? `${d.toArea} · ` : `${d.riderName} · `}
-                {fmtDate(d.date)}
-                {(d.tripCount > 1) && ` · ${d.tripCount} رائڈز`}
+                {isRickshawCard
+                  ? <>{fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}</>
+                  : <>{d.partyName ? `${d.toArea} · ` : `${d.riderName} · `}{fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}</>
+                }
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[9px] font-black uppercase ${statusColor}`}>{d.entryStatus}</span>
+                <span className={`text-[9px] font-black uppercase ${statusColor}`}>{isRickshawCard ? statusUrdu : d.entryStatus}</span>
                 {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
-                <span className={`text-[9px] font-black uppercase ${d.fareReceived ? 'text-emerald-600' : 'text-orange-500'}`}>{d.fareReceived ? '💰 Fare ✓' : '💰 Fare ⏳'}</span>
+                <span className={`text-[9px] font-black uppercase ${d.fareReceived ? 'text-emerald-600' : 'text-orange-500'}`}>
+                  {isRickshawCard ? (d.fareReceived ? '✓ وصول' : '⏳ باقی') : (d.fareReceived ? '💰 Fare ✓' : '💰 Fare ⏳')}
+                </span>
               </div>
             </div>
           </div>
-          <div className="text-right shrink-0">
+          <div className={`${isRickshawCard ? 'text-left' : 'text-right'} shrink-0`}>
             <div className="font-black text-blue-700">Rs.{(d.finalFare||0).toLocaleString()}</div>
-            <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{m.label}</div>
+            {!isRickshawCard && <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{m.label}</div>}
+            {isRickshawCard && d.tripCount > 1 && <div className="text-[9px] text-amber-500 font-bold mt-0.5">{d.tripCount} رائڈز</div>}
           </div>
         </div>
       </button>
@@ -3175,7 +3192,9 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
           {/* Fare Received toggle */}
           <button onClick={toggleFareReceived}
             className={`w-full py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${fareRcvd ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
-            {fareRcvd ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received'}
+            {isRickshawCard
+              ? (fareRcvd ? '✓ گاہک سے کرایہ وصول' : '⏳ کرایہ ابھی نہیں ملا')
+              : (fareRcvd ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received')}
           </button>
 
           <div className="flex gap-2 flex-wrap pt-1">
@@ -3881,7 +3900,7 @@ function RickshawRateRow({ r, showToast }) {
       <div className="flex items-center justify-between">
         <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
         <div className="text-right flex-1 min-w-0 px-2">
-          <div className="font-black text-slate-800 text-sm" style={{fontFamily:'serif'}}>{urduName || r.area}</div>
+          <div className="font-black text-slate-800 text-sm" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{urduName || r.area}</div>
           {urduName && <div className="text-[8px] font-bold text-slate-400 truncate">{r.area}</div>}
         </div>
       </div>
@@ -3955,7 +3974,7 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
     <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>رکشہ کرایہ</span>
+        <span className="text-xl font-black text-amber-700" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>رکشہ کرایہ</span>
         <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest" dir="ltr">Rickshaw Fixed Rates</span>
       </div>
 
