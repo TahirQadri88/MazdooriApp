@@ -1621,9 +1621,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {/* Breakdown */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-white border-2 border-slate-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-slate-400 mb-1`}>{t('Total Earned', 'کل کرایہ')}</div>
+          <div className={`${lbl} text-slate-600 mb-1`}>{t('Total Earned', 'کل کرایہ')}</div>
           <div className="font-black text-slate-700 text-sm">Rs.{totalEarned.toLocaleString()}</div>
-          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} {t('trips', 'رائڈز')}</div>
+          <div className="text-[8px] text-slate-500 font-bold mt-0.5">{myFin.length} {t('trips', 'رائڈز')}</div>
         </div>
         <div className="bg-emerald-50 border-2 border-emerald-100 p-3 rounded-2xl text-center shadow-sm">
           <div className={`${lbl} text-emerald-600 mb-1`}>{t('Collected', 'گاہک سے وصول')}</div>
@@ -1649,7 +1649,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div key={d.id} className="bg-white border-2 border-red-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
                 <div className="font-black text-slate-800 text-sm">{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
-                <div className="text-[9px] font-bold text-slate-400">{fmtDate(d.date)}</div>
+                <div className="text-[9px] font-bold text-red-400">{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-red-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1670,7 +1670,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div key={d.id} className="bg-white border-2 border-emerald-100 rounded-2xl p-3 flex justify-between items-center opacity-75">
               <div>
                 <div className="font-black text-slate-800 text-sm">{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
-                <div className="text-[9px] font-bold text-slate-400">{fmtDate(d.date)}</div>
+                <div className="text-[9px] font-bold text-emerald-500">{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-emerald-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1679,12 +1679,12 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       )}
 
       {periodTrips.length === 0 && myFin.length > 0 && (
-        <div className="text-center text-slate-400 text-sm font-bold py-4">
+        <div className="text-center text-amber-500 text-sm font-bold py-4">
           {t('No trips in this period', 'اس مدت میں کوئی رائڈ نہیں')}
         </div>
       )}
       {myFin.length === 0 && (
-        <div className="text-center text-slate-400 text-sm font-bold py-6">
+        <div className="text-center text-amber-500 text-sm font-bold py-6">
           {t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ رائڈ نہیں')}
         </div>
       )}
@@ -1698,7 +1698,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           <div className="font-black text-slate-700 text-sm">{t('Total:', 'کل:')} Rs.{advance.toLocaleString()}</div>
         </div>
         {myAdvances.length === 0 && (
-          <div className="text-[10px] text-slate-400 font-bold px-1">{t('No entries recorded', 'کوئی اندراج نہیں')}</div>
+          <div className="text-[10px] text-slate-500 font-bold px-1">{t('No entries recorded', 'کوئی اندراج نہیں')}</div>
         )}
         {myAdvances.map(a => {
           const isPayment = a.type === 'payment';
@@ -1869,7 +1869,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   });
   const searchTerm = search.trim().toLowerCase();
   const searchResults = searchTerm ? rickshawAreaRates.filter(r => r.area.toLowerCase().includes(searchTerm)) : null;
-  const lbl = 'text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1';
+  const lbl = 'text-[9px] font-black text-amber-600 uppercase tracking-widest block mb-1';
   const inp = 'bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900';
 
   const AreaBtn = ({ r }) => {
@@ -1888,11 +1888,11 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
           {urduName || r.area}
         </div>
         {urduName && (
-          <div className={`text-[8px] mt-0.5 ${sel ? 'text-amber-200' : 'text-slate-400'}`}>{r.area}</div>
+          <div className={`text-[8px] mt-0.5 ${sel ? 'text-amber-200' : 'text-amber-500'}`}>{r.area}</div>
         )}
         <div className={`text-[11px] font-black mt-1 flex items-center justify-end gap-1 ${sel ? 'text-amber-100' : 'text-amber-600'}`} dir="ltr">
           Rs.{(r.farePerRickshaw || 0).toLocaleString()}
-          {r.distanceKm > 0 && <span className={`text-[9px] font-bold ${sel ? 'text-amber-200' : 'text-slate-400'}`}>{r.distanceKm}km</span>}
+          {r.distanceKm > 0 && <span className={`text-[9px] font-bold ${sel ? 'text-amber-200' : 'text-blue-400'}`}>{r.distanceKm}km</span>}
         </div>
       </button>
     );
@@ -2034,7 +2034,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
                 <div className="text-sm font-black text-slate-800" style={{fontFamily:'serif'}}>
                   {URDU_CAT[cat] || cat}
                 </div>
-                <div className="text-[8px] font-bold text-slate-300 shrink-0">{areas.length} علاقے</div>
+                <div className="text-[8px] font-bold text-amber-400 shrink-0">{areas.length} علاقے</div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {catRides > 0 && (
@@ -2057,7 +2057,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {/* Custom area */}
       <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-3 space-y-2">
         <div className="text-sm font-black text-slate-600" style={{fontFamily:'serif'}}>+ الگ علاقہ</div>
-        <div className="text-[9px] font-bold text-slate-400">فہرست میں نہ ہو تو یہاں لکھیں</div>
+        <div className="text-[9px] font-bold text-amber-500">فہرست میں نہ ہو تو یہاں لکھیں</div>
         <div className="flex gap-2">
           <input placeholder="علاقہ کا نام..." value={customArea} onChange={e => setCustomArea(e.target.value)}
             className={`flex-1 ${inp}`} />
@@ -2175,7 +2175,7 @@ function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
     else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
   };
 
-  const lbl = 'text-[8px] font-black text-slate-400 uppercase tracking-widest';
+  const lbl = 'text-[8px] font-black text-amber-600 uppercase tracking-widest';
 
   return (
     <div className="space-y-4 pb-10">
