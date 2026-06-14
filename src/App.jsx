@@ -1639,7 +1639,7 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
       {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
-      {tab === 'new'     && <DispatchForm riderType="bike" ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'new'     && <DispatchForm riderType={ridesUser.type || 'bike'} ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
     </div>
