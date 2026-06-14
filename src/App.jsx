@@ -1694,23 +1694,36 @@ const URDU_AREA_NAMES = {
   'Korangi Industrial Area':'کورنگی صنعتی علاقہ','Korangi Causeway':'کورنگی کاز وے','Korangi Creek':'کورنگی کریک',
 };
 
+// All distances from R17 Warehouse, AlHilal Society, Federal B Area, Karachi
+// Confirmed: R17 → DensoHall (Saddar/Khyber Shop) ≈ 9 km
 const AREA_DISTANCES = {
+  // Landhi / East Karachi
   'Bhains Colony':22,'Khurram Abad — Landhi':20,'Army Land — Landhi':21,'Navy Land — Landhi':21,'Babar Market — Landhi':19,
+  // Super Highway cattle farms (R17→Sohrab Goth 9km + highway km)
   'Jameel Memon Society (S/W)':35,'52 Acre Scheme (S/W)':36,'Nagori Society (S/W)':37,'Areesha Cattle Society (S/W)':38,
   'Karachi Dairy & Cattle City (S/W)':38,'Dumba Goth (S/W)':33,'Ramzan Piri (S/W)':34,'Solangi Stop (S/W)':34,'Hashim Goth (S/W)':32,
+  // Gadap (north Karachi, beyond Super Highway)
   'Abdullah Hotel — Gadap':42,'TOMCL — Organic Meat Co. Gadap':44,'Jumani Goth — Gadap':45,'GFA Farms — Gadap':46,
-  'Piyala Hotel — Gulberg':12,'Orangi Town':8,
-  'Cantt Train Station — Saddar':18,'Daewoo Terminal — Saddar':18,'Shalimar Terminal — Saddar':17,
-  'Faisal Movers — Saddar':17,'Intercity Bus Terminal — Saddar':18,
-  'Kharadar Transport Area':20,'Maripur / Hawksbay':25,
-  'DHA Phase 1':28,'DHA Phase 2':30,'DHA Phase 3':32,'DHA Phase 4':33,
-  'DHA Phase 5':35,'DHA Phase 6':36,'DHA Phase 7':38,'DHA Phase 8':40,'DHA City (Phase 9)':48,
-  'R17 Warehouse → Khyber Shop (Stock Transfer)':15,'Sohrab Goth Bus Adda → R17 Warehouse':9,
-  'Naval Colony':10,'Mach Goth':6,'Mangopir':9,
-  'Gulshan Block 1':14,'Gulshan Block 2':14,'Gulshan Block 3':14,'Gulshan Block 4':15,'Gulshan Block 5':15,
-  'Gulshan Block 6':15,'Gulshan Block 7':16,'Gulshan Block 8':16,'Gulshan Block 9':16,'Gulshan Block 10':16,
-  'Gulshan Block 11':16,'Gulshan Block 12':16,'Gulshan Block 13':16,'Gulshan Block 14':16,'Gulshan Block 15':16,
-  'Gulshan Block 16':16,'Gulshan Block 17':17,'Gulshan Block 18':17,'Gulshan Block 19':17,'Gulshan Block 20':17,'Gulshan Block 21':17,
+  // West Karachi
+  'Piyala Hotel — Gulberg':12,'Orangi Town':13,
+  // Saddar area — same zone as DensoHall (~9km), terminals within 1-2km of shop
+  'Cantt Train Station — Saddar':10,'Daewoo Terminal — Saddar':10,'Shalimar Terminal — Saddar':10,
+  'Faisal Movers — Saddar':10,'Intercity Bus Terminal — Saddar':11,
+  // Old city / port
+  'Kharadar Transport Area':13,'Maripur / Hawksbay':22,
+  // DHA (via MA Jinnah Road from AlHilal)
+  'DHA Phase 1':18,'DHA Phase 2':21,'DHA Phase 3':24,'DHA Phase 4':26,
+  'DHA Phase 5':28,'DHA Phase 6':31,'DHA Phase 7':34,'DHA Phase 8':37,'DHA City (Phase 9)':48,
+  // Regular routes
+  'R17 Warehouse → Khyber Shop (Stock Transfer)':9,'Sohrab Goth Bus Adda → R17 Warehouse':9,
+  // Northwest / Keamari
+  'Naval Colony':18,'Mach Goth':16,'Mangopir':18,
+  // Gulshan-e-Iqbal (east via University Road)
+  'Gulshan Block 1':12,'Gulshan Block 2':12,'Gulshan Block 3':12,'Gulshan Block 4':13,'Gulshan Block 5':13,
+  'Gulshan Block 6':13,'Gulshan Block 7':14,'Gulshan Block 8':14,'Gulshan Block 9':14,'Gulshan Block 10':14,
+  'Gulshan Block 11':15,'Gulshan Block 12':15,'Gulshan Block 13':15,'Gulshan Block 14':15,'Gulshan Block 15':15,
+  'Gulshan Block 16':16,'Gulshan Block 17':16,'Gulshan Block 18':16,'Gulshan Block 19':17,'Gulshan Block 20':17,'Gulshan Block 21':17,
+  // Korangi (far east)
   'Korangi No. 1':22,'Korangi No. 2':22,'Korangi No. 3':23,'Korangi No. 4':23,'Korangi No. 5':24,'Korangi No. 6':24,
   'Korangi Industrial Area':25,'Korangi Causeway':26,'Korangi Creek':27,
 };
