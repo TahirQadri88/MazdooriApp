@@ -1681,7 +1681,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   );
 }
 
-const CAT_ORDER = ['Regular Route','Landhi','Super Highway','Gadap','Saddar','Gulshan','Korangi','DHA','Gulberg','Goods Transport','دیگر'];
+const CAT_ORDER = ['Regular Route','Landhi','Super Highway','Gadap','Saddar','Goods Transport','Gulshan','Korangi','DHA','Gulberg','دیگر'];
 
 function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [date, setDate]         = useState(getLocalDateStr());
@@ -1692,7 +1692,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [customFare, setCustomFare] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch]     = useState('');
-  const [openCats, setOpenCats] = useState(() => new Set(['Regular Route', 'Landhi', 'Super Highway']));
+  const [openCats, setOpenCats] = useState(() => new Set());
 
   const toggleCat = (cat) => setOpenCats(prev => {
     const next = new Set(prev);
@@ -1755,9 +1755,9 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
     'Gulberg': 'گلبرگ',
     'Gulshan': 'گلشن',
     'Saddar': 'صدر',
-    'Goods Transport': 'سامان گاڑی',
+    'Goods Transport': 'ٹرانسپورٹ پر بکنگ',
     'DHA': 'ڈی ایچ اے',
-    'Regular Route': 'روزانہ کا راستہ',
+    'Regular Route': 'ریگولر رائڈز',
     'Korangi': 'کورنگی',
     'دیگر': 'دیگر',
   };
@@ -1872,7 +1872,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {/* Section header */}
       <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex items-center justify-between">
         <div>
-          <div className="text-lg font-black text-amber-800" style={{fontFamily:'serif'}}>علاقہ چنیں</div>
+          <div className="text-lg font-black text-amber-800" style={{fontFamily:'serif'}}>علاقہ کا انتخاب کریں</div>
           <div className="text-[9px] font-bold text-amber-500">ایک بار ٹیپ = ایک رائڈ</div>
         </div>
         {basket.length > 0 && (
