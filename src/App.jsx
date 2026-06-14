@@ -1782,9 +1782,9 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
     return (
       <button type="button"
         onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
-        className={`relative p-3 rounded-2xl border-2 text-left active:scale-95 transition-all shadow-sm ${sel ? 'bg-amber-500 border-amber-600 shadow-amber-200' : 'bg-white border-amber-100 hover:border-amber-300'}`}>
+        className={`relative p-3 rounded-2xl border-2 text-right active:scale-95 transition-all shadow-sm ${sel ? 'bg-amber-500 border-amber-600 shadow-amber-200' : 'bg-white border-amber-100 hover:border-amber-300'}`}>
         {sel && (
-          <span className="absolute -top-2.5 -right-2.5 w-7 h-7 bg-emerald-500 text-white rounded-full text-xs font-black flex items-center justify-center shadow-lg border-2 border-white">
+          <span className="absolute -top-2.5 -left-2.5 w-7 h-7 bg-emerald-500 text-white rounded-full text-xs font-black flex items-center justify-center shadow-lg border-2 border-white">
             {sel.count}
           </span>
         )}
@@ -1836,7 +1836,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       <div className="flex gap-3">
         <button onClick={() => setStep('pick')}
           className="flex-1 bg-slate-100 text-slate-700 font-black py-4 rounded-2xl text-sm uppercase tracking-widest active:scale-95 transition-all">
-          ← واپس
+          واپس →
         </button>
         <button onClick={submit} disabled={submitting}
           className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -1884,18 +1884,19 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       </div>
 
       {/* Search bar */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-3.5 text-amber-400 pointer-events-none"/>
+      <div className="relative" dir="rtl">
+        <Search size={15} className="absolute right-3 top-3.5 text-amber-400 pointer-events-none"/>
         <input
           type="text"
+          dir="rtl"
           placeholder="علاقہ تلاش کریں..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full bg-white border-2 border-amber-200 pl-9 pr-9 p-3 rounded-2xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900"
+          className="w-full bg-white border-2 border-amber-200 pr-9 pl-9 p-3 rounded-2xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900"
         />
         {search && (
           <button onClick={() => setSearch('')}
-            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors">
+            className="absolute left-3 top-3 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={16}/>
           </button>
         )}
@@ -2008,7 +2009,7 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
   const isRickshaw = ridesUser.type === 'rickshaw';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir={isRickshaw ? 'rtl' : undefined}>
       <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
         <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
           {isRickshaw ? 'میرا کرایہ' : 'My Pay'}
@@ -3763,11 +3764,8 @@ function RickshawRateRow({ r, showToast }) {
 
   return (
     <div className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex items-center gap-2">
-      <div className="flex-1 min-w-0">
-        <div className="font-black text-slate-800 text-sm truncate">{r.area}</div>
-        {r.notes && <div className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{r.notes}</div>}
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
+      <div className="flex items-center gap-1 shrink-0" dir="ltr">
         <span className="text-[10px] font-black text-slate-400">Rs.</span>
         <input
           type="number" value={fare}
@@ -3778,7 +3776,10 @@ function RickshawRateRow({ r, showToast }) {
           className="w-20 bg-amber-50 border-2 border-amber-200 p-1.5 rounded-xl font-black text-amber-700 text-sm text-right outline-none focus:border-amber-500"
         />
       </div>
-      <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
+      <div className="flex-1 min-w-0 text-right">
+        <div className="font-black text-slate-800 text-sm truncate">{r.area}</div>
+        {r.notes && <div className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{r.notes}</div>}
+      </div>
     </div>
   );
 }
@@ -3824,11 +3825,11 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
   const groups = Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b));
 
   return (
-    <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4">
+    <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>رکشہ کرایہ</span>
-        <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Rickshaw Fixed Rates</span>
+        <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest" dir="ltr">Rickshaw Fixed Rates</span>
       </div>
 
       {/* Seed button */}
