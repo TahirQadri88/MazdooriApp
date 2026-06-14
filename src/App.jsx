@@ -1505,7 +1505,8 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
   const JUNK_NOTES = ['Salary Payment', 'Payment', 'salary payment', 'payment'];
 
   const tripLines = sorted.map((d, i) => {
-    const km = d.distanceKm ? `${d.distanceKm}km` : '—';
+    const rawKm = d.distanceKm || (d.from === 'shop' ? AREA_DISTANCES_SHOP[d.toArea] : AREA_DISTANCES[d.toArea]) || 0;
+    const km = rawKm ? `${rawKm}km` : '—';
     let line = `${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
