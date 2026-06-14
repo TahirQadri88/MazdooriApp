@@ -1,0 +1,97 @@
+{
+  "_origins": {
+    "r17": {
+      "name": "R17 Warehouse — Al Hilal Society, University Road, Gulshan-e-Iqbal, Karachi",
+      "lat": 24.9261,
+      "lon": 67.1124
+    },
+    "shop": {
+      "name": "Khyber Traders Shop — DensoHall, M.A. Jinnah Road, Karachi",
+      "lat": 24.8622,
+      "lon": 67.0078
+    }
+  },
+  "areas": {
+    "Bhains Colony":                            { "lat": 24.9033, "lon": 67.1733 },
+    "Khurram Abad — Landhi":                    { "lat": 24.8694, "lon": 67.1814 },
+    "Army Land — Landhi":                       { "lat": 24.8656, "lon": 67.1986 },
+    "Navy Land — Landhi":                       { "lat": 24.8789, "lon": 67.1869 },
+    "Babar Market — Landhi":                    { "lat": 24.8861, "lon": 67.1822 },
+
+    "Dumba Goth (S/W)":                         { "lat": 25.1011, "lon": 67.1836 },
+    "Hashim Goth (S/W)":                        { "lat": 25.0756, "lon": 67.1714 },
+    "Ramzan Piri (S/W)":                        { "lat": 25.1103, "lon": 67.2047 },
+    "Solangi Stop (S/W)":                       { "lat": 25.1156, "lon": 67.2114 },
+    "Jameel Memon Society (S/W)":               { "lat": 25.1400, "lon": 67.2453 },
+    "52 Acre Scheme (S/W)":                     { "lat": 25.1478, "lon": 67.2589 },
+    "Nagori Society (S/W)":                     { "lat": 25.1553, "lon": 67.2703 },
+    "Areesha Cattle Society (S/W)":             { "lat": 25.1631, "lon": 67.2836 },
+    "Karachi Dairy & Cattle City (S/W)":        { "lat": 25.1628, "lon": 67.2839 },
+
+    "Abdullah Hotel — Gadap":                   { "lat": 25.1775, "lon": 67.2106 },
+    "TOMCL — Organic Meat Co. Gadap":           { "lat": 25.1953, "lon": 67.2231 },
+    "Jumani Goth — Gadap":                      { "lat": 25.2039, "lon": 67.2294 },
+    "GFA Farms — Gadap":                        { "lat": 25.2111, "lon": 67.2358 },
+
+    "Piyala Hotel — Gulberg":                   { "lat": 24.9347, "lon": 67.0481 },
+    "Orangi Town":                              { "lat": 24.9553, "lon": 67.0219 },
+
+    "Cantt Train Station — Saddar":             { "lat": 24.8578, "lon": 67.0103 },
+    "Daewoo Terminal — Saddar":                 { "lat": 24.8603, "lon": 67.0119 },
+    "Shalimar Terminal — Saddar":               { "lat": 24.8597, "lon": 67.0108 },
+    "Faisal Movers — Saddar":                   { "lat": 24.8589, "lon": 67.0097 },
+    "Intercity Bus Terminal — Saddar":          { "lat": 24.8628, "lon": 67.0183 },
+
+    "Kharadar Transport Area":                  { "lat": 24.8617, "lon": 67.0256 },
+    "Maripur / Hawksbay":                       { "lat": 24.8639, "lon": 66.9644 },
+
+    "DHA Phase 1":                              { "lat": 24.8239, "lon": 67.0544 },
+    "DHA Phase 2":                              { "lat": 24.8047, "lon": 67.0819 },
+    "DHA Phase 3":                              { "lat": 24.7903, "lon": 67.0992 },
+    "DHA Phase 4":                              { "lat": 24.7739, "lon": 67.1161 },
+    "DHA Phase 5":                              { "lat": 24.7589, "lon": 67.1344 },
+    "DHA Phase 6":                              { "lat": 24.7419, "lon": 67.1536 },
+    "DHA Phase 7":                              { "lat": 24.7253, "lon": 67.1719 },
+    "DHA Phase 8":                              { "lat": 24.7086, "lon": 67.1903 },
+    "DHA City (Phase 9)":                       { "lat": 24.9014, "lon": 66.9831 },
+
+    "R17 Warehouse → Khyber Shop (Stock Transfer)": { "lat": 24.8622, "lon": 67.0078 },
+    "Sohrab Goth Bus Adda → R17 Warehouse":    { "lat": 24.9511, "lon": 67.0869 },
+
+    "Naval Colony":                             { "lat": 24.8803, "lon": 66.9928 },
+    "Mach Goth":                                { "lat": 24.9681, "lon": 67.0056 },
+    "Mangopir":                                 { "lat": 24.9953, "lon": 67.0228 },
+
+    "Gulshan Block 1":                          { "lat": 24.9072, "lon": 67.1156 },
+    "Gulshan Block 2":                          { "lat": 24.9086, "lon": 67.1189 },
+    "Gulshan Block 3":                          { "lat": 24.9097, "lon": 67.1219 },
+    "Gulshan Block 4":                          { "lat": 24.9111, "lon": 67.1253 },
+    "Gulshan Block 5":                          { "lat": 24.9128, "lon": 67.1289 },
+    "Gulshan Block 6":                          { "lat": 24.9144, "lon": 67.1317 },
+    "Gulshan Block 7":                          { "lat": 24.9161, "lon": 67.1347 },
+    "Gulshan Block 8":                          { "lat": 24.9178, "lon": 67.1378 },
+    "Gulshan Block 9":                          { "lat": 24.9194, "lon": 67.1406 },
+    "Gulshan Block 10":                         { "lat": 24.9211, "lon": 67.1436 },
+    "Gulshan Block 11":                         { "lat": 24.9228, "lon": 67.1467 },
+    "Gulshan Block 12":                         { "lat": 24.9244, "lon": 67.1497 },
+    "Gulshan Block 13":                         { "lat": 24.9261, "lon": 67.1528 },
+    "Gulshan Block 14":                         { "lat": 24.9278, "lon": 67.1558 },
+    "Gulshan Block 15":                         { "lat": 24.9294, "lon": 67.1589 },
+    "Gulshan Block 16":                         { "lat": 24.9311, "lon": 67.1619 },
+    "Gulshan Block 17":                         { "lat": 24.9328, "lon": 67.1650 },
+    "Gulshan Block 18":                         { "lat": 24.9344, "lon": 67.1681 },
+    "Gulshan Block 19":                         { "lat": 24.9361, "lon": 67.1711 },
+    "Gulshan Block 20":                         { "lat": 24.9378, "lon": 67.1742 },
+    "Gulshan Block 21":                         { "lat": 24.9394, "lon": 67.1772 },
+
+    "Korangi No. 1":                            { "lat": 24.8731, "lon": 67.1153 },
+    "Korangi No. 2":                            { "lat": 24.8669, "lon": 67.1231 },
+    "Korangi No. 3":                            { "lat": 24.8606, "lon": 67.1308 },
+    "Korangi No. 4":                            { "lat": 24.8544, "lon": 67.1386 },
+    "Korangi No. 5":                            { "lat": 24.8481, "lon": 67.1464 },
+    "Korangi No. 6":                            { "lat": 24.8419, "lon": 67.1542 },
+    "Korangi Industrial Area":                  { "lat": 24.8339, "lon": 67.1244 },
+    "Korangi Causeway":                         { "lat": 24.8158, "lon": 67.1394 },
+    "Korangi Creek":                            { "lat": 24.8011, "lon": 67.1542 }
+  }
+}
