@@ -1683,38 +1683,45 @@ const URDU_AREA_NAMES = {
   'Korangi Industrial Area':'کورنگی صنعتی علاقہ','Korangi Causeway':'کورنگی کاز وے','Korangi Creek':'کورنگی کریک',
 };
 
-// All distances (km) from R17 Warehouse, Al Hilal Society, University Road, Gulshan-e-Iqbal, Karachi
-// Reference: R17 → DensoHall/Khyber Shop (M.A. Jinnah Road) ≈ 9 km
+// Driving distances (km) — source: Gemini / Google Maps routing, June 2025
+// Origin A: R17 Warehouse, Al Hilal Society, University Road, Gulshan-e-Iqbal
 const AREA_DISTANCES = {
-  // Landhi / East Karachi
-  'Bhains Colony':22,'Khurram Abad — Landhi':20,'Army Land — Landhi':21,'Navy Land — Landhi':21,'Babar Market — Landhi':19,
-  // Super Highway cattle farms (R17→Sohrab Goth ~9km + highway onward)
-  'Jameel Memon Society (S/W)':35,'52 Acre Scheme (S/W)':36,'Nagori Society (S/W)':37,'Areesha Cattle Society (S/W)':38,
-  'Karachi Dairy & Cattle City (S/W)':38,'Dumba Goth (S/W)':33,'Ramzan Piri (S/W)':34,'Solangi Stop (S/W)':34,'Hashim Goth (S/W)':32,
-  // Gadap (north Karachi, beyond Super Highway)
-  'Abdullah Hotel — Gadap':42,'TOMCL — Organic Meat Co. Gadap':44,'Jumani Goth — Gadap':45,'GFA Farms — Gadap':46,
-  // West Karachi (via M.A. Jinnah Road / Northern Bypass)
-  'Piyala Hotel — Gulberg':14,'Orangi Town':15,
-  // Saddar / City area (via M.A. Jinnah Road — same corridor as DensoHall)
-  'Cantt Train Station — Saddar':10,'Daewoo Terminal — Saddar':10,'Shalimar Terminal — Saddar':10,
-  'Faisal Movers — Saddar':10,'Intercity Bus Terminal — Saddar':11,
-  // Old city / port
-  'Kharadar Transport Area':13,'Maripur / Hawksbay':22,
-  // DHA (via M.A. Jinnah Road / University Road south)
-  'DHA Phase 1':18,'DHA Phase 2':21,'DHA Phase 3':24,'DHA Phase 4':26,
-  'DHA Phase 5':28,'DHA Phase 6':31,'DHA Phase 7':34,'DHA Phase 8':37,'DHA City (Phase 9)':48,
-  // Regular fixed routes
+  'Bhains Colony':25,'Khurram Abad — Landhi':20,'Army Land — Landhi':23,'Navy Land — Landhi':23,'Babar Market — Landhi':20,
+  'Hashim Goth (S/W)':21,'Dumba Goth (S/W)':25,'Ramzan Piri (S/W)':27,'Solangi Stop (S/W)':28,
+  'Jameel Memon Society (S/W)':22,'52 Acre Scheme (S/W)':24,'Nagori Society (S/W)':30,'Areesha Cattle Society (S/W)':31,'Karachi Dairy & Cattle City (S/W)':35,
+  'Abdullah Hotel — Gadap':33,'TOMCL — Organic Meat Co. Gadap':34,'Jumani Goth — Gadap':34,'GFA Farms — Gadap':36,
+  'Piyala Hotel — Gulberg':7,'Orangi Town':13,
+  'Cantt Train Station — Saddar':9,'Daewoo Terminal — Saddar':9,'Shalimar Terminal — Saddar':9,'Faisal Movers — Saddar':9,'Intercity Bus Terminal — Saddar':9,
+  'Kharadar Transport Area':14,'Maripur / Hawksbay':20,
+  'DHA Phase 1':10,'DHA Phase 2':12,'DHA Phase 3':13,'DHA Phase 4':14,'DHA Phase 5':15,'DHA Phase 6':16,'DHA Phase 7':16,'DHA Phase 8':18,'DHA City (Phase 9)':45,
   'R17 Warehouse → Khyber Shop (Stock Transfer)':9,'Sohrab Goth Bus Adda → R17 Warehouse':9,
-  // Northwest / Keamari
-  'Naval Colony':18,'Mach Goth':16,'Mangopir':18,
-  // Gulshan-e-Iqbal blocks — R17 is IN Gulshan (Al Hilal Society, University Road)
-  'Gulshan Block 1':4,'Gulshan Block 2':4,'Gulshan Block 3':4,'Gulshan Block 4':4,'Gulshan Block 5':5,
-  'Gulshan Block 6':5,'Gulshan Block 7':5,'Gulshan Block 8':5,'Gulshan Block 9':5,'Gulshan Block 10':6,
-  'Gulshan Block 11':6,'Gulshan Block 12':6,'Gulshan Block 13':6,'Gulshan Block 14':6,'Gulshan Block 15':7,
-  'Gulshan Block 16':7,'Gulshan Block 17':7,'Gulshan Block 18':7,'Gulshan Block 19':8,'Gulshan Block 20':8,'Gulshan Block 21':8,
-  // Korangi (southeast, via Korangi Road / Shah Faisal from Gulshan)
-  'Korangi No. 1':11,'Korangi No. 2':12,'Korangi No. 3':13,'Korangi No. 4':14,'Korangi No. 5':14,'Korangi No. 6':15,
-  'Korangi Industrial Area':16,'Korangi Causeway':18,'Korangi Creek':20,
+  'Naval Colony':22,'Mach Goth':18,'Mangopir':15,
+  'Gulshan Block 1':5,'Gulshan Block 2':4,'Gulshan Block 3':4,'Gulshan Block 4':5,'Gulshan Block 5':6,
+  'Gulshan Block 6':6,'Gulshan Block 7':4,'Gulshan Block 8':6,'Gulshan Block 9':7,'Gulshan Block 10':7,
+  'Gulshan Block 11':8,'Gulshan Block 12':7,'Gulshan Block 13':5,'Gulshan Block 14':3,'Gulshan Block 15':4,
+  'Gulshan Block 16':5,'Gulshan Block 17':5,'Gulshan Block 18':6,'Gulshan Block 19':6,'Gulshan Block 20':7,'Gulshan Block 21':8,
+  'Korangi No. 1':13,'Korangi No. 2':14,'Korangi No. 3':15,'Korangi No. 4':16,'Korangi No. 5':17,'Korangi No. 6':18,
+  'Korangi Industrial Area':17,'Korangi Causeway':12,'Korangi Creek':19,
+};
+
+// Origin B: Khyber Traders Shop, DensoHall, M.A. Jinnah Road, Karachi
+const AREA_DISTANCES_SHOP = {
+  'Bhains Colony':28,'Khurram Abad — Landhi':26,'Army Land — Landhi':28,'Navy Land — Landhi':29,'Babar Market — Landhi':25,
+  'Hashim Goth (S/W)':30,'Dumba Goth (S/W)':35,'Ramzan Piri (S/W)':36,'Solangi Stop (S/W)':38,
+  'Jameel Memon Society (S/W)':32,'52 Acre Scheme (S/W)':34,'Nagori Society (S/W)':39,'Areesha Cattle Society (S/W)':40,'Karachi Dairy & Cattle City (S/W)':45,
+  'Abdullah Hotel — Gadap':42,'TOMCL — Organic Meat Co. Gadap':44,'Jumani Goth — Gadap':43,'GFA Farms — Gadap':45,
+  'Piyala Hotel — Gulberg':13,'Orangi Town':16,
+  'Cantt Train Station — Saddar':5,'Daewoo Terminal — Saddar':5,'Shalimar Terminal — Saddar':5,'Faisal Movers — Saddar':5,'Intercity Bus Terminal — Saddar':4,
+  'Kharadar Transport Area':3,'Maripur / Hawksbay':12,
+  'DHA Phase 1':6,'DHA Phase 2':9,'DHA Phase 3':10,'DHA Phase 4':11,'DHA Phase 5':11,'DHA Phase 6':13,'DHA Phase 7':12,'DHA Phase 8':15,'DHA City (Phase 9)':55,
+  'R17 Warehouse → Khyber Shop (Stock Transfer)':9,'Sohrab Goth Bus Adda → R17 Warehouse':18,
+  'Naval Colony':12,'Mach Goth':18,'Mangopir':17,
+  'Gulshan Block 1':14,'Gulshan Block 2':13,'Gulshan Block 3':13,'Gulshan Block 4':14,'Gulshan Block 5':15,
+  'Gulshan Block 6':15,'Gulshan Block 7':15,'Gulshan Block 8':16,'Gulshan Block 9':16,'Gulshan Block 10':17,
+  'Gulshan Block 11':17,'Gulshan Block 12':16,'Gulshan Block 13':15,'Gulshan Block 14':13,'Gulshan Block 15':13,
+  'Gulshan Block 16':14,'Gulshan Block 17':14,'Gulshan Block 18':15,'Gulshan Block 19':15,'Gulshan Block 20':16,'Gulshan Block 21':17,
+  'Korangi No. 1':16,'Korangi No. 2':17,'Korangi No. 3':18,'Korangi No. 4':19,'Korangi No. 5':20,'Korangi No. 6':21,
+  'Korangi Industrial Area':19,'Korangi Causeway':15,'Korangi Creek':22,
 };
 
 function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
@@ -3775,6 +3782,7 @@ const RICKSHAW_TEMPLATE_AREAS = [
 function RickshawRateRow({ r, showToast }) {
   const [fare, setFare] = useState((r.farePerRickshaw || '').toString());
   const [dist, setDist] = useState((r.distanceKm || '').toString());
+  const [distShop, setDistShop] = useState((r.distanceKmShop || '').toString());
   const ref = () => doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id);
   const urduName = URDU_AREA_NAMES[r.area];
 
@@ -3789,7 +3797,14 @@ function RickshawRateRow({ r, showToast }) {
     const km = parseFloat(dist) || 0;
     if (km === (r.distanceKm || 0)) return;
     await updateDoc(ref(), { distanceKm: km });
-    showToast(`${urduName || r.area} — ${km} km محفوظ`);
+    showToast(`${urduName || r.area} — R17: ${km} km`);
+  };
+
+  const saveDistShop = async () => {
+    const km = parseFloat(distShop) || 0;
+    if (km === (r.distanceKmShop || 0)) return;
+    await updateDoc(ref(), { distanceKmShop: km });
+    showToast(`${urduName || r.area} — Shop: ${km} km`);
   };
 
   const del = async () => {
@@ -3815,11 +3830,17 @@ function RickshawRateRow({ r, showToast }) {
             onBlur={saveFare} onKeyDown={e => e.key === 'Enter' && e.target.blur()} placeholder="0"
             className={numInp('w-full border-amber-200 text-amber-700 focus:border-amber-500')} />
         </div>
-        <div className="w-24">
-          <div className="text-[8px] font-black text-blue-500 mb-0.5">مسافت / km</div>
+        <div className="w-16">
+          <div className="text-[8px] font-black text-blue-500 mb-0.5">R17 km</div>
           <input type="number" value={dist} onChange={e => setDist(e.target.value)}
             onBlur={saveDist} onKeyDown={e => e.key === 'Enter' && e.target.blur()} placeholder="0"
             className={numInp('w-full border-blue-200 text-blue-700 focus:border-blue-500')} />
+        </div>
+        <div className="w-16">
+          <div className="text-[8px] font-black text-purple-500 mb-0.5">Shop km</div>
+          <input type="number" value={distShop} onChange={e => setDistShop(e.target.value)}
+            onBlur={saveDistShop} onKeyDown={e => e.key === 'Enter' && e.target.blur()} placeholder="0"
+            className={numInp('w-full border-purple-200 text-purple-700 focus:border-purple-500')} />
         </div>
       </div>
     </div>
@@ -3845,23 +3866,23 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
   const seedDefaults = async () => {
     const existingMap = Object.fromEntries(rickshawAreaRates.map(r => [r.area, r]));
     const toAdd = RICKSHAW_TEMPLATE_AREAS.filter(t => !existingMap[t.area]);
-    const toUpdate = RICKSHAW_TEMPLATE_AREAS.filter(t => existingMap[t.area] && !existingMap[t.area].distanceKm && AREA_DISTANCES[t.area]);
+    const toUpdate = RICKSHAW_TEMPLATE_AREAS.filter(t => existingMap[t.area]);
     if (!toAdd.length && !toUpdate.length) { showToast('تمام علاقے پہلے سے موجود ہیں — کوئی تبدیلی نہیں ہوئی'); return; }
     setSeeding(true);
     const batch = writeBatch(db);
     toAdd.forEach(t => {
       const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}_${Math.random().toString(36).slice(2,7)}`);
-      batch.set(ref, { area: t.area, farePerRickshaw: 0, notes: t.notes, distanceKm: AREA_DISTANCES[t.area] || 0, createdAt: Date.now() });
+      batch.set(ref, { area: t.area, farePerRickshaw: 0, notes: t.notes, distanceKm: AREA_DISTANCES[t.area] || 0, distanceKmShop: AREA_DISTANCES_SHOP[t.area] || 0, createdAt: Date.now() });
     });
     toUpdate.forEach(t => {
       const existing = existingMap[t.area];
-      batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', existing.id), { distanceKm: AREA_DISTANCES[t.area] });
+      batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', existing.id), { distanceKm: AREA_DISTANCES[t.area] || 0, distanceKmShop: AREA_DISTANCES_SHOP[t.area] || 0 });
     });
     await batch.commit();
     setSeeding(false);
-    const msg = toAdd.length && toUpdate.length ? `${toAdd.length} نئے علاقے + ${toUpdate.length} مسافتیں اپ ڈیٹ — پرانے کرائے محفوظ`
-                : toAdd.length ? `${toAdd.length} نئے علاقے شامل ہوئے — پرانے کرائے محفوظ ہیں`
-                : `${toUpdate.length} علاقوں کی مسافت اپ ڈیٹ ہوئی`;
+    const msg = toAdd.length && toUpdate.length ? `${toAdd.length} نئے علاقے + ${toUpdate.length} مسافتیں اپ ڈیٹ`
+                : toAdd.length ? `${toAdd.length} نئے علاقے شامل ہوئے`
+                : `${toUpdate.length} علاقوں کی مسافتیں اپ ڈیٹ ہوئیں`;
     showToast(msg);
   };
 
@@ -3886,10 +3907,10 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
       <button onClick={seedDefaults} disabled={seeding}
         className="w-full bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
         {seeding ? <RefreshCw size={13} className="animate-spin"/> : <DownloadCloud size={13}/>}
-        {seeding ? 'لوڈ ہو رہا ہے...' : 'علاقے لوڈ کریں — Load Default Areas'}
+        {seeding ? 'لوڈ ہو رہا ہے...' : 'علاقے لوڈ کریں + مسافتیں اپ ڈیٹ کریں'}
       </button>
       <div className="text-[9px] text-amber-600 font-bold text-center -mt-2">
-        صرف نئے علاقے شامل ہوں گے — پرانے کرائے محفوظ رہیں گے
+        Gemini distances (R17 + Shop) will be applied — fares kept
       </div>
 
       {/* Add custom area */}
