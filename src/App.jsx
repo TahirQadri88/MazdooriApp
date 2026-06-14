@@ -1506,7 +1506,8 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
 
   const tripLines = sorted.map((d, i) => {
     const rawKm = d.distanceKm || AREA_DISTANCES[d.toArea] || AREA_DISTANCES_SHOP[d.toArea] || 0;
-    const km = rawKm ? `${rawKm}km` : '—';
+    const totalKm = rawKm * (d.rickshawCount || 1);
+    const km = totalKm ? `${totalKm}km` : '—';
     let line = `${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
@@ -3393,7 +3394,7 @@ function ReportPerRider({ fin, riders, range, showToast }) {
       const fare = rd.reduce((s,d)=>s+(d.finalFare||0),0);
       const cod = rd.reduce((s,d)=>s+(d.codAmount||0),0);
       const codCol = rd.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
-      const km = rd.reduce((s,d)=>s+(d.distanceKm||0),0);
+      const km = rd.reduce((s,d)=>s+(d.distanceKm||0)*(d.rickshawCount||1),0);
       t += `👤 *${name}*\nTrips: ${rd.length}\nDistance: ${km.toFixed(1)} km\nFreight: Rs.${fare.toLocaleString()}\nCOD Carried: Rs.${cod.toLocaleString()}\nCOD Collected: Rs.${codCol.toLocaleString()}\nCOD Pending: Rs.${(cod-codCol).toLocaleString()}\n\n`;
     });
     t += `_Mazdoori Calculator App — Khyber Traders_`;
@@ -3409,7 +3410,7 @@ function ReportPerRider({ fin, riders, range, showToast }) {
         const fare = riderDisps.reduce((s,d) => s+(d.finalFare||0), 0);
         const cod = riderDisps.reduce((s,d) => s+(d.codAmount||0), 0);
         const codCollected = riderDisps.filter(d=>d.codCollected).reduce((s,d)=>s+(d.codAmount||0),0);
-        const km = riderDisps.reduce((s,d) => s+(d.distanceKm||0), 0);
+        const km = riderDisps.reduce((s,d) => s+(d.distanceKm||0)*(d.rickshawCount||1), 0);
         return (
           <ReportCard key={rid} title={name}>
             <StatRow label="Trips" value={riderDisps.length} />
@@ -3544,7 +3545,7 @@ function ReportCOD({ fin, riders, range, showToast }) {
 function ReportCost({ fin, range, showToast }) {
   const groups = { bike: fin.filter(d=>d.riderType==='bike'), rickshaw: fin.filter(d=>d.riderType==='rickshaw'), bykea: fin.filter(d=>d.riderType==='bykea') };
   const cpk = (arr) => {
-    const totalKm = arr.reduce((s,d)=>s+(d.distanceKm||0),0);
+    const totalKm = arr.reduce((s,d)=>s+(d.distanceKm||0)*(d.rickshawCount||1),0);
     const totalFare = arr.reduce((s,d)=>s+(d.finalFare||0),0);
     return totalKm > 0 ? (totalFare/totalKm).toFixed(1) : '—';
   };
