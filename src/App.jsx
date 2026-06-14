@@ -1491,6 +1491,7 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd
 
 // Rider view: only their own trips
 function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
+  const myPending      = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'pending').sort((a,b) => b.createdAt - a.createdAt);
   const myFin          = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
   const unpaid         = myFin.filter(d => !d.fareReceived);
   const paid           = myFin.filter(d => d.fareReceived);
@@ -1534,6 +1535,33 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           className="w-full bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
           <Share2 size={14}/> Share My Report
         </button>
+      )}
+
+      {/* Pending submissions */}
+      {myPending.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-1">
+              <Clock size={12}/> جائزہ میں / Pending Review
+            </span>
+            <span className="text-[10px] font-black text-amber-600">{myPending.length} entries</span>
+          </div>
+          {myPending.map(d => (
+            <div key={d.id} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
+              <div>
+                <div className="font-black text-slate-800 text-sm">{d.toArea}</div>
+                <div className="text-[9px] font-bold text-amber-500">{d.tripCount > 1 ? `${d.tripCount} ٹرپ` : '1 ٹرپ'} · {fmtDate(d.date)}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-black text-amber-700">Rs.{(d.finalFare||0).toLocaleString()}</div>
+                <div className="text-[8px] font-black text-amber-400 uppercase">Pending</div>
+              </div>
+            </div>
+          ))}
+          <div className="text-[9px] text-amber-600 font-bold text-center pt-1">
+            Admin تصدیق کے بعد کرایہ میں شامل ہوگا
+          </div>
+        </div>
       )}
 
       {/* Breakdown */}
@@ -1625,6 +1653,230 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   );
 }
 
+function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
+  const [date, setDate]         = useState(getLocalDateStr());
+  const [from, setFrom]         = useState('shop');
+  const [basket, setBasket]     = useState([]);
+  const [step, setStep]         = useState('pick');
+  const [customArea, setCustomArea] = useState('');
+  const [customFare, setCustomFare] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const tap = (area, fare, notes = '') =>
+    setBasket(prev => {
+      const ex = prev.find(b => b.area === area);
+      return ex ? prev.map(b => b.area === area ? { ...b, count: b.count + 1 } : b)
+                : [...prev, { area, fare, notes, count: 1 }];
+    });
+
+  const setCount = (area, n) =>
+    n <= 0 ? setBasket(prev => prev.filter(b => b.area !== area))
+           : setBasket(prev => prev.map(b => b.area === area ? { ...b, count: n } : b));
+
+  const addCustom = () => {
+    if (!customArea.trim()) { showToast('علاقہ لکھیں', 'error'); return; }
+    tap(customArea.trim(), parseFloat(customFare) || 0);
+    setCustomArea(''); setCustomFare('');
+  };
+
+  const totalFare  = basket.reduce((s, b) => s + b.fare * b.count, 0);
+  const totalTrips = basket.reduce((s, b) => s + b.count, 0);
+
+  const submit = async () => {
+    if (!basket.length) { showToast('کوئی علاقہ نہیں چنا', 'error'); return; }
+    setSubmitting(true);
+    try {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const batch = writeBatch(db);
+      basket.forEach(b => {
+        const id = `dispatch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', id), {
+          date, time: timeStr, from, fromCustom: '',
+          toArea: b.area, partyName: '',
+          riderType: 'rickshaw', riderId: ridesUser.id, riderName: ridesUser.name,
+          rickshawCount: b.count, tripCount: b.count,
+          farePerUnit: b.fare, finalFare: b.fare * b.count,
+          distanceKm: 0, ratePerKm: 0, suggestedFare: 0,
+          loadDescription: '', notes: b.notes || '',
+          entryStatus: 'pending', fareReceived: false,
+          codAmount: 0, codCollected: false, createdAt: Date.now(),
+        });
+      });
+      await batch.commit();
+      showToast(`✓ ${totalTrips} ٹرپ جمع ہو گئے`);
+      onDone();
+    } catch (e) { showToast('خرابی / Error', 'error'); }
+    setSubmitting(false);
+  };
+
+  const grouped = rickshawAreaRates.reduce((acc, r) => {
+    const key = r.notes || 'دیگر';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+  const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  const lbl = 'text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1';
+  const inp = 'bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900';
+
+  // ── Review screen ──────────────────────────────
+  if (step === 'review') return (
+    <div className="space-y-4 pb-10">
+      <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-4">
+        <div className="text-center">
+          <div className="text-2xl font-black text-amber-700" style={{fontFamily:'serif'}}>جائزہ</div>
+          <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Review Before Submit</div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="bg-white rounded-2xl p-3 border-2 border-amber-100">
+            <div className={`${lbl} mb-1`}>تاریخ</div>
+            <div className="font-black text-slate-800">{fmtDate(date)}</div>
+          </div>
+          <div className="bg-white rounded-2xl p-3 border-2 border-amber-100">
+            <div className={`${lbl} mb-1`}>رکشہ والا</div>
+            <div className="font-black text-slate-800 truncate text-sm">{ridesUser.name}</div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {basket.map(b => (
+            <div key={b.area} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
+              <div>
+                <div className="font-black text-slate-800 text-sm">{b.area}</div>
+                <div className="text-[9px] font-bold text-amber-600">{b.count} ٹرپ × Rs.{b.fare.toLocaleString()}</div>
+              </div>
+              <div className="font-black text-amber-700 text-sm">Rs.{(b.fare * b.count).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-amber-600 rounded-2xl p-4 flex justify-between items-center">
+          <div>
+            <div className="text-[9px] font-black text-amber-100 uppercase">کل / Total</div>
+            <div className="text-[9px] font-bold text-amber-200">{totalTrips} سفر</div>
+          </div>
+          <div className="text-2xl font-black text-white">Rs.{totalFare.toLocaleString()}</div>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <button onClick={() => setStep('pick')}
+          className="flex-1 bg-slate-100 text-slate-700 font-black py-4 rounded-2xl text-sm uppercase tracking-widest active:scale-95 transition-all">
+          ← واپس
+        </button>
+        <button onClick={submit} disabled={submitting}
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+          {submitting ? <RefreshCw size={16} className="animate-spin"/> : <Check size={16}/>}
+          {submitting ? '...' : 'جمع کریں'}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── Area picker screen ─────────────────────────
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Date + From */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={lbl}>تاریخ / Date</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className={`w-full ${inp}`} />
+        </div>
+        <div>
+          <label className={lbl}>روانگی / From</label>
+          <div className="flex gap-1">
+            {[['shop','🏪 دکان'],['warehouse','🏭 گودام']].map(([v, l]) => (
+              <button key={v} onClick={() => setFrom(v)}
+                className={`flex-1 py-2.5 text-[10px] font-black rounded-xl border-2 transition-all ${from === v ? 'bg-amber-500 border-amber-500 text-white' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section header */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>علاقہ چنیں</span>
+        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Tap once per trip</span>
+      </div>
+
+      {/* Area buttons */}
+      {rickshawAreaRates.length === 0 ? (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center space-y-1">
+          <div className="text-[11px] font-black text-amber-700">کوئی علاقہ نہیں</div>
+          <div className="text-[9px] text-amber-600 font-bold">Admin → Settings → رکشہ کرایہ میں علاقے شامل کریں</div>
+        </div>
+      ) : groups.map(([cat, areas]) => (
+        <div key={cat} className="space-y-2">
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{cat}</div>
+          <div className="grid grid-cols-2 gap-2">
+            {areas.map(r => {
+              const sel = basket.find(b => b.area === r.area);
+              return (
+                <button key={r.id} type="button"
+                  onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
+                  className={`relative p-3.5 rounded-2xl border-2 text-left active:scale-95 transition-all ${sel ? 'bg-amber-500 border-amber-500' : 'bg-white border-amber-200'}`}>
+                  {sel && (
+                    <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 text-white rounded-full text-[10px] font-black flex items-center justify-center shadow-md">
+                      {sel.count}
+                    </span>
+                  )}
+                  <div className={`font-black text-sm leading-tight ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
+                  <div className={`text-[10px] font-black mt-1 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
+                    Rs.{(r.farePerRickshaw || 0).toLocaleString()}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Custom area */}
+      <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-3 space-y-2">
+        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">+ الگ علاقہ / Custom Area</div>
+        <div className="flex gap-2">
+          <input placeholder="علاقہ..." value={customArea} onChange={e => setCustomArea(e.target.value)}
+            className={`flex-1 ${inp}`} />
+          <input type="number" placeholder="Rs." value={customFare} onChange={e => setCustomFare(e.target.value)}
+            className={`w-20 ${inp}`} />
+          <button onClick={addCustom}
+            className="bg-amber-500 text-white font-black px-3 py-2 rounded-xl text-sm active:scale-95 transition-all">+</button>
+        </div>
+      </div>
+
+      {/* Basket */}
+      {basket.length > 0 && (
+        <div className="bg-white border-2 border-emerald-300 rounded-3xl p-4 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">چنے ہوئے علاقے</span>
+            <span className="text-[10px] font-black text-emerald-600">{totalTrips} سفر · Rs.{totalFare.toLocaleString()}</span>
+          </div>
+          {basket.map(b => (
+            <div key={b.area} className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5">
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-slate-800 text-sm truncate">{b.area}</div>
+                <div className="text-[9px] font-bold text-emerald-600">Rs.{b.fare.toLocaleString()} / ٹرپ</div>
+              </div>
+              <button onClick={() => setCount(b.area, b.count - 1)}
+                className="w-8 h-8 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-700 flex items-center justify-center active:scale-95 transition-all text-lg">−</button>
+              <span className="w-6 text-center font-black text-slate-800 text-sm">{b.count}</span>
+              <button onClick={() => setCount(b.area, b.count + 1)}
+                className="w-8 h-8 bg-amber-500 border-2 border-amber-500 rounded-xl font-black text-white flex items-center justify-center active:scale-95 transition-all text-lg">+</button>
+              <div className="font-black text-emerald-700 text-sm w-16 text-right">Rs.{(b.fare * b.count).toLocaleString()}</div>
+              <button onClick={() => setBasket(prev => prev.filter(x => x.area !== b.area))}
+                className="text-red-300 hover:text-red-500 p-0.5 transition-colors"><Trash2 size={13}/></button>
+            </div>
+          ))}
+          <button onClick={() => setStep('review')}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-base uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+            <ArrowUp size={18}/> جمع کریں — Rs.{totalFare.toLocaleString()}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispatchSettings, showToast, ridesUser }) {
   const [tab, setTab] = useState('mypay');
   const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
@@ -1639,7 +1891,9 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
       </div>
       {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
-      {tab === 'new'     && <DispatchForm riderType={ridesUser.type || 'bike'} ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
+      {tab === 'new'     && (ridesUser.type === 'rickshaw'
+        ? <RickshawDayEntry rickshawAreaRates={rickshawAreaRates} ridesUser={ridesUser} showToast={showToast} onDone={() => setTab('mypay')} />
+        : <DispatchForm riderType={ridesUser.type || 'bike'} ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />)}
       {tab === 'bykea'   && isBykea && <DispatchForm riderType="bykea" ridesUser={ridesUser} dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('history')} />}
       {tab === 'history' && <DispatchList dispatches={myDispatches} riders={riders} ridesUser={ridesUser} isAdmin={false} showToast={showToast} />}
     </div>
@@ -2641,8 +2895,14 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
           <div className="flex items-start gap-3 min-w-0">
             <span className={`w-3 h-3 rounded-full mt-1 shrink-0 ${m.dot}`}></span>
             <div className="min-w-0">
-              <div className="font-black text-slate-900 uppercase truncate">{d.partyName}</div>
-              <div className="text-[10px] font-bold text-slate-500 mt-0.5">{d.toArea} · {fmtDate(d.date)}</div>
+              <div className="font-black text-slate-900 uppercase truncate">
+                {d.partyName || d.toArea}
+              </div>
+              <div className="text-[10px] font-bold text-slate-500 mt-0.5">
+                {d.partyName ? `${d.toArea} · ` : `${d.riderName} · `}
+                {fmtDate(d.date)}
+                {(d.tripCount > 1) && ` · ${d.tripCount} ٹرپ`}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-[9px] font-black uppercase ${statusColor}`}>{d.entryStatus}</span>
                 {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
