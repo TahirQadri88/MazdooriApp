@@ -1498,9 +1498,11 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const totalEarned    = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
   const alreadyWithMe  = paid.reduce((s, d) => s + (d.finalFare || 0), 0);
   const unpaidTotal    = unpaid.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const myAdvances     = (riderAdvances || []).filter(a => a.riderId === ridesUser.id).sort((a,b) => b.date?.localeCompare(a.date));
+  const myAdvances     = (riderAdvances || []).filter(a => a.riderId === ridesUser.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const advance        = myAdvances.reduce((s, a) => s + (a.amount || 0), 0);
   const adminOwes      = totalEarned - alreadyWithMe - advance;
+  const isRickshaw     = ridesUser.type === 'rickshaw';
+  const t = (en, ur) => isRickshaw ? ur : en;
 
   const lbl = 'text-[8px] font-black uppercase tracking-widest';
 
@@ -1508,13 +1510,24 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
     <div className="space-y-4 pb-10">
       {/* Balance card */}
       <div className={`p-5 rounded-3xl border-2 shadow-sm text-center ${adminOwes > 0 ? 'bg-blue-50 border-blue-200' : adminOwes < 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+        {isRickshaw && (
+          <div className="text-base font-black text-slate-600 mb-2" style={{fontFamily:'serif'}}>{ridesUser.name}</div>
+        )}
         <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${adminOwes > 0 ? 'text-blue-600' : adminOwes < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-          {adminOwes > 0 ? 'Admin Owes You' : adminOwes < 0 ? 'You Owe Admin' : 'All Settled'}
+          {adminOwes > 0
+            ? t('Admin Owes You', 'ادارے کی طرف سے دینا ہے')
+            : adminOwes < 0
+              ? t('You Owe Admin', 'آپ کے ذمے')
+              : t('All Settled', 'حساب صاف ✓')}
         </div>
         <div className={`text-4xl font-black ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
           Rs.{Math.abs(adminOwes).toLocaleString()}
         </div>
-        {advance > 0 && <div className="text-[9px] font-bold text-slate-500 mt-1">Advance deducted: Rs.{advance.toLocaleString()}</div>}
+        {advance > 0 && (
+          <div className="text-[9px] font-bold text-slate-500 mt-1">
+            {t('Advance deducted:', 'ایڈوانس کٹا:')} Rs.{advance.toLocaleString()}
+          </div>
+        )}
       </div>
 
       {/* Share report */}
@@ -1533,7 +1546,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           else { navigator.clipboard.writeText(text); }
         }}
           className="w-full bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-          <Share2 size={14}/> Share My Report
+          <Share2 size={14}/> {t('Share My Report', 'رپورٹ شیئر کریں')}
         </button>
       )}
 
@@ -1541,25 +1554,29 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {myPending.length > 0 && (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-1">
-              <Clock size={12}/> جائزہ میں / Pending Review
+            <span className="font-black text-amber-700 flex items-center gap-1 text-sm" style={isRickshaw ? {fontFamily:'serif'} : {}}>
+              <Clock size={14}/> {t('Pending Review', 'جائزے میں — ابھی تصدیق نہیں')}
             </span>
-            <span className="text-[10px] font-black text-amber-600">{myPending.length} entries</span>
+            <span className="text-[10px] font-black text-amber-600 bg-amber-200 px-2 py-0.5 rounded-full">
+              {myPending.length} {t('entries', 'اندراج')}
+            </span>
           </div>
           {myPending.map(d => (
             <div key={d.id} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
                 <div className="font-black text-slate-800 text-sm">{d.toArea}</div>
-                <div className="text-[9px] font-bold text-amber-500">{d.tripCount > 1 ? `${d.tripCount} ٹرپ` : '1 ٹرپ'} · {fmtDate(d.date)}</div>
+                <div className="text-[9px] font-bold text-amber-500">
+                  {d.tripCount > 1 ? `${d.tripCount} ٹرپ` : '1 ٹرپ'} · {fmtDate(d.date)}
+                </div>
               </div>
               <div className="text-right">
                 <div className="font-black text-amber-700">Rs.{(d.finalFare||0).toLocaleString()}</div>
-                <div className="text-[8px] font-black text-amber-400 uppercase">Pending</div>
+                <div className="text-[8px] font-black text-amber-400 uppercase">{t('Pending', 'انتظار')}</div>
               </div>
             </div>
           ))}
-          <div className="text-[9px] text-amber-600 font-bold text-center pt-1">
-            Admin تصدیق کے بعد کرایہ میں شامل ہوگا
+          <div className="text-[9px] text-amber-600 font-bold text-center pt-1" style={isRickshaw ? {fontFamily:'serif'} : {}}>
+            {t('Will be included after admin approval', 'Admin تصدیق کے بعد کرایہ شامل ہوگا')}
           </div>
         </div>
       )}
@@ -1567,18 +1584,18 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {/* Breakdown */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-white border-2 border-slate-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-slate-400 mb-1`}>Total Earned</div>
-          <div className="font-black text-slate-700">Rs.{totalEarned.toLocaleString()}</div>
-          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} trips</div>
+          <div className={`${lbl} text-slate-400 mb-1`}>{t('Total Earned', 'کل کمائی')}</div>
+          <div className="font-black text-slate-700 text-sm">Rs.{totalEarned.toLocaleString()}</div>
+          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} {t('trips', 'ٹرپ')}</div>
         </div>
         <div className="bg-emerald-50 border-2 border-emerald-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-emerald-600 mb-1`}>With Me</div>
-          <div className="font-black text-emerald-700">Rs.{alreadyWithMe.toLocaleString()}</div>
-          <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} trips</div>
+          <div className={`${lbl} text-emerald-600 mb-1`}>{t('With Me', 'میرے پاس')}</div>
+          <div className="font-black text-emerald-700 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
+          <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} {t('trips', 'ٹرپ')}</div>
         </div>
         <div className="bg-amber-50 border-2 border-amber-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-amber-600 mb-1`}>Advance</div>
-          <div className="font-black text-amber-700">Rs.{advance.toLocaleString()}</div>
+          <div className={`${lbl} text-amber-600 mb-1`}>{t('Advance', 'ایڈوانس')}</div>
+          <div className="font-black text-amber-700 text-sm">Rs.{advance.toLocaleString()}</div>
         </div>
       </div>
 
@@ -1587,15 +1604,15 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
-              <AlertCircle size={12}/> Pending Payment ({unpaid.length} trips)
+              <AlertCircle size={12}/> {t(`Pending Payment (${unpaid.length} trips)`, `باقی ادائیگی (${unpaid.length} ٹرپ)`)}
             </div>
             <div className="font-black text-red-600 text-sm">Rs.{unpaidTotal.toLocaleString()}</div>
           </div>
           {unpaid.map(d => (
             <div key={d.id} className="bg-white border-2 border-red-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
-                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName}</div>
-                <div className="text-[9px] font-bold text-slate-400">{d.toArea} · {fmtDate(d.date)}</div>
+                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName || d.toArea}</div>
+                <div className="text-[9px] font-bold text-slate-400">{d.partyName ? `${d.toArea} · ` : ''}{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-red-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1608,15 +1625,15 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-              <CheckCircle size={12}/> Fare Collected ({paid.length} trips)
+              <CheckCircle size={12}/> {t(`Fare Collected (${paid.length} trips)`, `کرایہ ملا (${paid.length} ٹرپ)`)}
             </div>
             <div className="font-black text-emerald-600 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
           </div>
           {paid.map(d => (
             <div key={d.id} className="bg-white border-2 border-emerald-100 rounded-2xl p-3 flex justify-between items-center opacity-75">
               <div>
-                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName}</div>
-                <div className="text-[9px] font-bold text-slate-400">{d.toArea} · {fmtDate(d.date)}</div>
+                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName || d.toArea}</div>
+                <div className="text-[9px] font-bold text-slate-400">{d.partyName ? `${d.toArea} · ` : ''}{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-emerald-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1625,23 +1642,33 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       )}
 
       {myFin.length === 0 && (
-        <div className="text-center text-slate-400 text-sm font-bold py-6">No finalized trips yet</div>
+        <div className="text-center text-slate-400 text-sm font-bold py-6">
+          {t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ ٹرپ نہیں')}
+        </div>
       )}
 
       {/* Advances + Payments ledger */}
       <div className="space-y-2">
         <div className="flex justify-between items-center px-1">
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Payment Ledger ({myAdvances.length})</div>
-          <div className="font-black text-slate-700 text-sm">Total: Rs.{advance.toLocaleString()}</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            {t(`Payment Ledger (${myAdvances.length})`, `حساب کتاب (${myAdvances.length})`)}
+          </div>
+          <div className="font-black text-slate-700 text-sm">{t('Total:', 'کل:')} Rs.{advance.toLocaleString()}</div>
         </div>
-        {myAdvances.length === 0 && <div className="text-[10px] text-slate-400 font-bold px-1">No entries recorded</div>}
+        {myAdvances.length === 0 && (
+          <div className="text-[10px] text-slate-400 font-bold px-1">{t('No entries recorded', 'کوئی اندراج نہیں')}</div>
+        )}
         {myAdvances.map(a => {
           const isPayment = a.type === 'payment';
           return (
             <div key={a.id} className={`border-2 rounded-2xl p-3 flex justify-between items-center ${isPayment ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-100'}`}>
               <div>
-                <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : 'text-amber-500'}`}>{isPayment ? '✅ Payment' : '💰 Advance'}</div>
-                <div className={`font-black text-sm ${isPayment ? 'text-blue-800' : 'text-amber-800'}`}>{a.note || (isPayment ? 'Payment' : 'Advance')}</div>
+                <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : 'text-amber-500'}`}>
+                  {isPayment ? `✅ ${t('Payment', 'ادائیگی')}` : `💰 ${t('Advance', 'ایڈوانس')}`}
+                </div>
+                <div className={`font-black text-sm ${isPayment ? 'text-blue-800' : 'text-amber-800'}`}>
+                  {a.note || (isPayment ? t('Payment', 'ادائیگی') : t('Advance', 'ایڈوانس'))}
+                </div>
                 <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : 'text-amber-400'}`}>{fmtDate(a.date)}</div>
               </div>
               <div className={`font-black ${isPayment ? 'text-blue-700' : 'text-amber-700'}`}>Rs.{(a.amount||0).toLocaleString()}</div>
@@ -1708,6 +1735,20 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       onDone();
     } catch (e) { showToast('خرابی / Error', 'error'); }
     setSubmitting(false);
+  };
+
+  const URDU_CAT = {
+    'Super Highway': 'سپر ہائی وے',
+    'Gadap': 'گڈاپ',
+    'Landhi': 'لانڈھی',
+    'Gulberg': 'گلبرگ',
+    'Gulshan': 'گلشن',
+    'Saddar': 'صدر',
+    'Goods Transport': 'سامان گاڑی',
+    'DHA': 'ڈی ایچ اے',
+    'Regular Route': 'روزانہ کا راستہ',
+    'Korangi': 'کورنگی',
+    'دیگر': 'دیگر',
   };
 
   const grouped = rickshawAreaRates.reduce((acc, r) => {
@@ -1794,34 +1835,48 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       </div>
 
       {/* Section header */}
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xl font-black text-amber-700" style={{fontFamily:'serif'}}>علاقہ چنیں</span>
-        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Tap once per trip</span>
+      <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div>
+          <div className="text-lg font-black text-amber-800" style={{fontFamily:'serif'}}>علاقہ چنیں</div>
+          <div className="text-[9px] font-bold text-amber-500">ایک بار ٹیپ = ایک ٹرپ</div>
+        </div>
+        {basket.length > 0 && (
+          <div className="text-right">
+            <div className="text-[9px] font-black text-emerald-700">{totalTrips} ٹرپ</div>
+            <div className="font-black text-emerald-700 text-sm">Rs.{totalFare.toLocaleString()}</div>
+          </div>
+        )}
       </div>
 
       {/* Area buttons */}
       {rickshawAreaRates.length === 0 ? (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center space-y-1">
-          <div className="text-[11px] font-black text-amber-700">کوئی علاقہ نہیں</div>
+          <div className="text-sm font-black text-amber-700" style={{fontFamily:'serif'}}>کوئی علاقہ نہیں</div>
           <div className="text-[9px] text-amber-600 font-bold">Admin → Settings → رکشہ کرایہ میں علاقے شامل کریں</div>
         </div>
       ) : groups.map(([cat, areas]) => (
         <div key={cat} className="space-y-2">
-          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">{cat}</div>
+          <div className="flex items-center gap-2 px-1">
+            <div className="text-sm font-black text-slate-700" style={{fontFamily:'serif'}}>
+              {URDU_CAT[cat] || cat}
+            </div>
+            <div className="flex-1 h-px bg-slate-200"/>
+            <div className="text-[8px] font-black text-slate-400 uppercase">{cat}</div>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {areas.map(r => {
               const sel = basket.find(b => b.area === r.area);
               return (
                 <button key={r.id} type="button"
                   onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
-                  className={`relative p-3.5 rounded-2xl border-2 text-left active:scale-95 transition-all ${sel ? 'bg-amber-500 border-amber-500' : 'bg-white border-amber-200'}`}>
+                  className={`relative p-3.5 rounded-2xl border-2 text-left active:scale-95 transition-all shadow-sm ${sel ? 'bg-amber-500 border-amber-600 shadow-amber-200' : 'bg-white border-amber-100 hover:border-amber-300'}`}>
                   {sel && (
-                    <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 text-white rounded-full text-[10px] font-black flex items-center justify-center shadow-md">
+                    <span className="absolute -top-2.5 -right-2.5 w-7 h-7 bg-emerald-500 text-white rounded-full text-xs font-black flex items-center justify-center shadow-lg border-2 border-white">
                       {sel.count}
                     </span>
                   )}
-                  <div className={`font-black text-sm leading-tight ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
-                  <div className={`text-[10px] font-black mt-1 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
+                  <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
+                  <div className={`text-[11px] font-black mt-1.5 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
                     Rs.{(r.farePerRickshaw || 0).toLocaleString()}
                   </div>
                 </button>
@@ -1833,14 +1888,15 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
 
       {/* Custom area */}
       <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-3 space-y-2">
-        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">+ الگ علاقہ / Custom Area</div>
+        <div className="text-sm font-black text-slate-600" style={{fontFamily:'serif'}}>+ الگ علاقہ</div>
+        <div className="text-[9px] font-bold text-slate-400">فہرست میں نہ ہو تو یہاں لکھیں</div>
         <div className="flex gap-2">
-          <input placeholder="علاقہ..." value={customArea} onChange={e => setCustomArea(e.target.value)}
+          <input placeholder="علاقہ کا نام..." value={customArea} onChange={e => setCustomArea(e.target.value)}
             className={`flex-1 ${inp}`} />
           <input type="number" placeholder="Rs." value={customFare} onChange={e => setCustomFare(e.target.value)}
             className={`w-20 ${inp}`} />
           <button onClick={addCustom}
-            className="bg-amber-500 text-white font-black px-3 py-2 rounded-xl text-sm active:scale-95 transition-all">+</button>
+            className="bg-amber-500 text-white font-black px-4 py-2 rounded-xl text-base active:scale-95 transition-all">+</button>
         </div>
       </div>
 
@@ -1848,28 +1904,31 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       {basket.length > 0 && (
         <div className="bg-white border-2 border-emerald-300 rounded-3xl p-4 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">چنے ہوئے علاقے</span>
-            <span className="text-[10px] font-black text-emerald-600">{totalTrips} سفر · Rs.{totalFare.toLocaleString()}</span>
+            <span className="text-sm font-black text-emerald-800" style={{fontFamily:'serif'}}>چنے ہوئے علاقے</span>
+            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              {totalTrips} ٹرپ · Rs.{totalFare.toLocaleString()}
+            </span>
           </div>
           {basket.map(b => (
-            <div key={b.area} className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5">
+            <div key={b.area} className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
               <div className="flex-1 min-w-0">
-                <div className="font-black text-slate-800 text-sm truncate">{b.area}</div>
+                <div className="font-black text-slate-800 text-xs truncate">{b.area}</div>
                 <div className="text-[9px] font-bold text-emerald-600">Rs.{b.fare.toLocaleString()} / ٹرپ</div>
               </div>
               <button onClick={() => setCount(b.area, b.count - 1)}
-                className="w-8 h-8 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-700 flex items-center justify-center active:scale-95 transition-all text-lg">−</button>
-              <span className="w-6 text-center font-black text-slate-800 text-sm">{b.count}</span>
+                className="w-9 h-9 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-700 flex items-center justify-center active:scale-95 transition-all text-xl">−</button>
+              <span className="w-7 text-center font-black text-slate-800">{b.count}</span>
               <button onClick={() => setCount(b.area, b.count + 1)}
-                className="w-8 h-8 bg-amber-500 border-2 border-amber-500 rounded-xl font-black text-white flex items-center justify-center active:scale-95 transition-all text-lg">+</button>
+                className="w-9 h-9 bg-amber-500 border-2 border-amber-500 rounded-xl font-black text-white flex items-center justify-center active:scale-95 transition-all text-xl">+</button>
               <div className="font-black text-emerald-700 text-sm w-16 text-right">Rs.{(b.fare * b.count).toLocaleString()}</div>
               <button onClick={() => setBasket(prev => prev.filter(x => x.area !== b.area))}
                 className="text-red-300 hover:text-red-500 p-0.5 transition-colors"><Trash2 size={13}/></button>
             </div>
           ))}
           <button onClick={() => setStep('review')}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-base uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-            <ArrowUp size={18}/> جمع کریں — Rs.{totalFare.toLocaleString()}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-base active:scale-95 transition-all flex items-center justify-center gap-2"
+            style={{fontFamily:'serif'}}>
+            <Check size={20}/> جائزہ لیں — Rs.{totalFare.toLocaleString()}
           </button>
         </div>
       )}
@@ -1881,14 +1940,21 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
   const [tab, setTab] = useState('mypay');
   const myDispatches = dispatches.filter(d => d.riderId === ridesUser.id).sort((a, b) => b.createdAt - a.createdAt);
   const isBykea = ridesUser.roles?.includes('bykea_manager');
+  const isRickshaw = ridesUser.type === 'rickshaw';
 
   return (
     <div className="space-y-4">
       <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
-        <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Pay</button>
-        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>New Trip</button>
+        <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+          {isRickshaw ? 'میری تنخواہ' : 'My Pay'}
+        </button>
+        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+          {isRickshaw ? 'نیا ٹرپ' : 'New Trip'}
+        </button>
         {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
-        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>My Trips</button>
+        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+          {isRickshaw ? 'میرے ٹرپ' : 'My Trips'}
+        </button>
       </div>
       {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
       {tab === 'new'     && (ridesUser.type === 'rickshaw'
@@ -3554,7 +3620,7 @@ const RICKSHAW_TEMPLATE_AREAS = [
   // Gulberg
   { area: 'Piyala Hotel — Gulberg', notes: 'Gulberg' },
   // Orangi
-  { area: 'Orangi Town', notes: '' },
+  { area: 'Orangi Town', notes: 'دیگر' },
   // Saddar
   { area: 'Cantt Train Station — Saddar', notes: 'Saddar' },
   { area: 'Daewoo Terminal — Saddar', notes: 'Saddar' },
@@ -3577,10 +3643,42 @@ const RICKSHAW_TEMPLATE_AREAS = [
   // Regular Routes
   { area: 'R17 Warehouse → Khyber Shop (Stock Transfer)', notes: 'Regular Route' },
   { area: 'Sohrab Goth Bus Adda → R17 Warehouse', notes: 'Regular Route' },
+  // Gulshan
+  { area: 'Gulshan Block 1', notes: 'Gulshan' },
+  { area: 'Gulshan Block 2', notes: 'Gulshan' },
+  { area: 'Gulshan Block 3', notes: 'Gulshan' },
+  { area: 'Gulshan Block 4', notes: 'Gulshan' },
+  { area: 'Gulshan Block 5', notes: 'Gulshan' },
+  { area: 'Gulshan Block 6', notes: 'Gulshan' },
+  { area: 'Gulshan Block 7', notes: 'Gulshan' },
+  { area: 'Gulshan Block 8', notes: 'Gulshan' },
+  { area: 'Gulshan Block 9', notes: 'Gulshan' },
+  { area: 'Gulshan Block 10', notes: 'Gulshan' },
+  { area: 'Gulshan Block 11', notes: 'Gulshan' },
+  { area: 'Gulshan Block 12', notes: 'Gulshan' },
+  { area: 'Gulshan Block 13', notes: 'Gulshan' },
+  { area: 'Gulshan Block 14', notes: 'Gulshan' },
+  { area: 'Gulshan Block 15', notes: 'Gulshan' },
+  { area: 'Gulshan Block 16', notes: 'Gulshan' },
+  { area: 'Gulshan Block 17', notes: 'Gulshan' },
+  { area: 'Gulshan Block 18', notes: 'Gulshan' },
+  { area: 'Gulshan Block 19', notes: 'Gulshan' },
+  { area: 'Gulshan Block 20', notes: 'Gulshan' },
+  { area: 'Gulshan Block 21', notes: 'Gulshan' },
+  // Korangi
+  { area: 'Korangi No. 1', notes: 'Korangi' },
+  { area: 'Korangi No. 2', notes: 'Korangi' },
+  { area: 'Korangi No. 3', notes: 'Korangi' },
+  { area: 'Korangi No. 4', notes: 'Korangi' },
+  { area: 'Korangi No. 5', notes: 'Korangi' },
+  { area: 'Korangi No. 6', notes: 'Korangi' },
+  { area: 'Korangi Industrial Area', notes: 'Korangi' },
+  { area: 'Korangi Causeway', notes: 'Korangi' },
+  { area: 'Korangi Creek', notes: 'Korangi' },
   // Other
-  { area: 'Naval Colony', notes: '' },
-  { area: 'Mach Goth', notes: '' },
-  { area: 'Mangopir', notes: '' },
+  { area: 'Naval Colony', notes: 'دیگر' },
+  { area: 'Mach Goth', notes: 'دیگر' },
+  { area: 'Mangopir', notes: 'دیگر' },
 ];
 
 function RickshawRateRow({ r, showToast }) {
