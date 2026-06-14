@@ -1732,14 +1732,14 @@ const URDU_AREA_NAMES = {
   'Jameel Memon Society (S/W)':'جمیل میمن سوسائٹی','52 Acre Scheme (S/W)':'۵۲ ایکڑ اسکیم',
   'Nagori Society (S/W)':'ناگوری سوسائٹی','Areesha Cattle Society (S/W)':'عریشہ کیٹل سوسائٹی',
   'Karachi Dairy & Cattle City (S/W)':'کراچی ڈیری کیٹل سٹی','Dumba Goth (S/W)':'ڈمبہ گوٹھ',
-  'Ramzan Piri (S/W)':'رمضان پیری','Solangi Stop (S/W)':'سولنگی اسٹاپ','Hashim Goth (S/W)':'ہاشم گوٹھ',
+  'Ramzan Piri (S/W)':'رمضان پیڑی','Solangi Stop (S/W)':'سولنگی اسٹاپ','Hashim Goth (S/W)':'ہاشم گوٹھ',
   'Abdullah Hotel — Gadap':'عبداللہ ہوٹل — گڈاپ','TOMCL — Organic Meat Co. Gadap':'TOMCL — گڈاپ',
   'Jumani Goth — Gadap':'جمانی گوٹھ — گڈاپ','GFA Farms — Gadap':'GFA فارمز — گڈاپ',
   'Piyala Hotel — Gulberg':'پیالہ ہوٹل — گلبرگ','Orangi Town':'اورنگی ٹاؤن',
   'Cantt Train Station — Saddar':'ریلوے اسٹیشن — صدر','Daewoo Terminal — Saddar':'ڈائیو ٹرمینل — صدر',
   'Shalimar Terminal — Saddar':'شالیمار ٹرمینل — صدر','Faisal Movers — Saddar':'فیصل موورز — صدر',
   'Intercity Bus Terminal — Saddar':'انٹرسٹی بس — صدر',
-  'Kharadar Transport Area':'کھارادر ٹرانسپورٹ','Maripur / Hawksbay':'ماری پور / ہاکس بے',
+  'Kharadar Transport Area':'کھارادر ٹرانسپورٹ','Maripur / Hawksbay':'ماڑی پور / ہاکس بے',
   'DHA Phase 1':'ڈی ایچ اے فیز ۱','DHA Phase 2':'ڈی ایچ اے فیز ۲','DHA Phase 3':'ڈی ایچ اے فیز ۳',
   'DHA Phase 4':'ڈی ایچ اے فیز ۴','DHA Phase 5':'ڈی ایچ اے فیز ۵','DHA Phase 6':'ڈی ایچ اے فیز ۶',
   'DHA Phase 7':'ڈی ایچ اے فیز ۷','DHA Phase 8':'ڈی ایچ اے فیز ۸','DHA City (Phase 9)':'ڈی ایچ اے سٹی (فیز ۹)',
@@ -1885,7 +1885,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
             {sel.count}
           </span>
         )}
-        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`} style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
+        <div className={`font-black text-sm leading-loose ${sel ? 'text-white' : 'text-slate-800'}`} style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
           {urduName || r.area}
         </div>
         {urduName && (
@@ -1920,9 +1920,9 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         <div className="space-y-2">
           {basket.map(b => (
             <div key={b.area} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
-              <div>
-                <div className="font-black text-slate-800 text-sm">{b.area}</div>
-                <div className="text-[9px] font-bold text-amber-600">{b.count === 1 ? '1 رائڈ' : `${b.count} رائڈز`} × Rs.{b.fare.toLocaleString()}</div>
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="font-black text-slate-800 text-sm leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{URDU_AREA_NAMES[b.area] || b.area}</div>
+                <div className="text-[9px] font-bold text-amber-600">{b.count === 1 ? '۱ رائڈ' : `${b.count} رائڈز`} × Rs.{b.fare.toLocaleString()}</div>
               </div>
               <div className="font-black text-amber-700 text-sm">Rs.{(b.fare * b.count).toLocaleString()}</div>
             </div>
@@ -2081,7 +2081,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
           {basket.map(b => (
             <div key={b.area} className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
               <div className="flex-1 min-w-0">
-                <div className="font-black text-slate-800 text-xs truncate">{b.area}</div>
+                <div className="font-black text-slate-800 text-sm leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{URDU_AREA_NAMES[b.area] || b.area}</div>
                 <div className="text-[9px] font-bold text-emerald-600">Rs.{b.fare.toLocaleString()} / رائڈ</div>
               </div>
               <button onClick={() => setCount(b.area, b.count - 1)}
@@ -2810,7 +2810,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
         {selRiderType === 'rickshaw' && rickshawAreaRates.length > 0 ? (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-lg font-black text-amber-700" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>🟡 محفوظ علاقے</span>
+              <span className="text-lg font-black text-amber-700 leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>🟡 محفوظ علاقے</span>
               <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Saved Areas</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -3138,7 +3138,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
           <div className={`flex items-start gap-3 min-w-0 ${isRickshawCard ? 'flex-row-reverse' : ''}`}>
             <span className={`w-3 h-3 rounded-full mt-1 shrink-0 ${m.dot}`}></span>
             <div className="min-w-0">
-              <div className={`font-black text-slate-900 truncate ${isRickshawCard ? '' : 'uppercase'}`}
+              <div className={`font-black text-slate-900 ${isRickshawCard ? 'leading-loose' : 'truncate uppercase'}`}
                 style={isRickshawCard ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
                 {isRickshawCard ? (urduArea || d.toArea) : (d.partyName || d.toArea)}
               </div>
@@ -3900,8 +3900,8 @@ function RickshawRateRow({ r, showToast }) {
       <div className="flex items-center justify-between">
         <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
         <div className="text-right flex-1 min-w-0 px-2">
-          <div className="font-black text-slate-800 text-sm" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{urduName || r.area}</div>
-          {urduName && <div className="text-[8px] font-bold text-slate-400 truncate">{r.area}</div>}
+          <div className="font-black text-slate-800 text-sm leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>{urduName || r.area}</div>
+          {urduName && <div className="text-[8px] font-bold text-slate-400">{r.area}</div>}
         </div>
       </div>
       <div className="flex gap-2" dir="ltr">
