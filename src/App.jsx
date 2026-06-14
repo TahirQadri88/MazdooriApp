@@ -2134,11 +2134,10 @@ function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
       {/* Grand totals */}
       <div className="bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm">
         <div className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-2"><DollarSign size={13}/> Summary</div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div className="bg-slate-50 p-3 rounded-xl text-center"><div className={lbl}>Total Fare</div><div className="font-black text-slate-700">Rs.{grandTotal.toLocaleString()}</div></div>
-          <div className="bg-emerald-50 p-3 rounded-xl text-center"><div className={`${lbl} text-emerald-600`}>Fare Received</div><div className="font-black text-emerald-700">Rs.{grandRcvd.toLocaleString()}</div></div>
-          <div className="bg-amber-50 p-3 rounded-xl text-center"><div className={`${lbl} text-amber-600`}>Total Advance</div><div className="font-black text-amber-700">Rs.{grandAdv.toLocaleString()}</div></div>
-          <div className="bg-red-50 p-3 rounded-xl text-center"><div className={`${lbl} text-red-500`}>Net to Pay</div><div className="font-black text-red-600 text-lg">Rs.{grandPayable.toLocaleString()}</div></div>
+          <div className="bg-amber-50 p-3 rounded-xl text-center"><div className={`${lbl} text-amber-600`}>Paid to Riders</div><div className="font-black text-amber-700">Rs.{grandAdv.toLocaleString()}</div></div>
+          <div className="bg-red-50 p-3 rounded-xl text-center"><div className={`${lbl} text-red-500`}>Net to Pay</div><div className="font-black text-red-600">Rs.{grandPayable.toLocaleString()}</div></div>
         </div>
       </div>
 
