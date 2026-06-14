@@ -413,8 +413,8 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 text-slate-900 pb-6 w-full overflow-x-hidden" dir="rtl">
         <header className="bg-blue-700 text-white p-4 sticky top-0 z-40 shadow-md">
           <div className="max-w-md mx-auto text-center">
-            <h1 className="text-base font-black leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>خیبر ٹریڈرز — رائڈر</h1>
-            <p className="text-[9px] font-bold opacity-70 tracking-widest">Khyber Traders · Rider App</p>
+            <h1 className="text-base font-black tracking-tight uppercase">KT Rider App</h1>
+            <p className="text-[9px] font-bold opacity-70 tracking-widest">Khyber Traders</p>
           </div>
         </header>
         {toast && (
