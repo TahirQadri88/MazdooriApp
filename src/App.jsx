@@ -1502,22 +1502,26 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
   const today = getLocalDateStr();
   const sep = '─────────────────────────';
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const JUNK_NOTES = ['Salary Payment', 'Payment', 'salary payment', 'payment'];
 
   const tripLines = sorted.map((d, i) => {
-    let line = `${i + 1}. ${d.partyName} | ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDate(d.date)}`;
+    const km = d.distanceKm ? `${d.distanceKm}km` : '—';
+    let line = `${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
   }).join('\n');
 
   const advLines = advEntries.length > 0
-    ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a =>
-        `${a.type === 'payment' ? '✅' : '💰'} Rs.${(a.amount || 0).toLocaleString()} | ${fmtDate(a.date)} | ${a.note || (a.type === 'payment' ? 'Payment' : 'Advance')}`
-      ).join('\n')
+    ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a => {
+        const label = a.type === 'payment' ? '✅ Fare Payment' : '💰 Advance';
+        const note  = a.note && !JUNK_NOTES.includes(a.note) ? ` | ${a.note}` : '';
+        return `${label} | Rs.${(a.amount || 0).toLocaleString()} | ${fmtDatePk(a.date)}${note}`;
+      }).join('\n')
     : 'No entries';
 
   const parts = [
     `📋 ${riderName.toUpperCase()} — Khyber Traders`,
-    `Date: ${fmtDate(today)} | Trips: ${tripList.length}`,
+    `Date: ${fmtDatePk(today)} | Trips: ${tripList.length}`,
     sep,
     tripLines || 'No trips',
     sep,
