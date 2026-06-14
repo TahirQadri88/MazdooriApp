@@ -1458,14 +1458,13 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
   );
 }
 
-function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd, totalAdv, netPayable }) {
+function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv, netPayable }) {
   const today = getLocalDateStr();
   const sep = '─────────────────────────';
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   const tripLines = sorted.map((d, i) => {
-    const st = d.fareReceived ? '✅' : '⏳';
-    let line = `${i + 1}. ${d.partyName} | ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${st} | ${fmtDate(d.date)}`;
+    let line = `${i + 1}. ${d.partyName} | ${d.toArea} | ${d.distanceKm || 0}km | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDate(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
   }).join('\n');
@@ -1482,8 +1481,7 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd
     sep,
     tripLines || 'No trips',
     sep,
-    `Fare: Rs.${totalFare.toLocaleString()} | With Rider: Rs.${fareRcvd.toLocaleString()} | Pending: Rs.${(totalFare - fareRcvd).toLocaleString()}`,
-    `Advance/Paid: Rs.${totalAdv.toLocaleString()} | *NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
+    `Fare: Rs.${totalFare.toLocaleString()} | Paid to Rider: Rs.${totalAdv.toLocaleString()} | *NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
   ];
   if (advEntries.length > 0) {
     parts.push(sep, `Ledger:`, advLines);
@@ -1495,13 +1493,10 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, fareRcvd
 function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const myPending   = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'pending').sort((a,b) => b.createdAt - a.createdAt);
   const myFin       = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
-  const paid        = myFin.filter(d => d.fareReceived);
   const totalEarned = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const fareRcvd    = paid.reduce((s, d) => s + (d.finalFare || 0), 0);
   const myAdvances  = (riderAdvances || []).filter(a => a.riderId === ridesUser.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const advance     = myAdvances.reduce((s, a) => s + (a.amount || 0), 0);
-  const totalRcvd   = fareRcvd + advance;
-  const adminOwes   = totalEarned - totalRcvd;
+  const adminOwes   = totalEarned - advance;
   const isRickshaw  = ridesUser.type === 'rickshaw';
   const t = (en, ur) => isRickshaw ? ur : en;
   const uf = { fontFamily: "'Noto Nastaliq Urdu', serif" };
@@ -1517,9 +1512,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
     if (period === 'month') return d.date >= monthStart;
     return true;
   });
-  const periodUnpaid      = periodTrips.filter(d => !d.fareReceived);
-  const periodPaid        = periodTrips.filter(d => d.fareReceived);
-  const periodUnpaidTotal = periodUnpaid.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const periodTotal = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
 
   return (
     <div className="space-y-4 pb-10">
@@ -1530,7 +1523,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           <div className="text-white font-black text-base leading-loose" style={isRickshaw ? uf : {}}>{ridesUser.name}</div>
           {myFin.length > 0 && (
             <button onClick={() => {
-              const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, fareRcvd, totalAdv: advance, netPayable: adminOwes });
+              const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, totalAdv: advance, netPayable: adminOwes });
               if (navigator.share) navigator.share({ title: `Pay Report — ${ridesUser.name}`, text });
               else { navigator.clipboard.writeText(text); }
             }} className="flex items-center gap-1 text-[9px] font-black text-blue-200 hover:text-white uppercase tracking-widest">
@@ -1546,8 +1539,8 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           </div>
           {/* Row 2 — Received */}
           <div className="flex justify-between items-center py-3">
-            <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Fare / Advance Received', 'وصول ہوا (کرایہ + ایڈوانس)')}</div>
-            <div className="font-black text-emerald-700 text-base" dir="ltr">Rs.{totalRcvd.toLocaleString()}</div>
+            <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Payments Received', 'وصول ہوا (ادائیگی)')}</div>
+            <div className="font-black text-emerald-700 text-base" dir="ltr">Rs.{advance.toLocaleString()}</div>
           </div>
           {/* Row 3 — Balance */}
           <div className={`flex justify-between items-center py-3 ${adminOwes === 0 ? '' : 'pt-4'}`}>
@@ -1602,21 +1595,17 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{periodTrips.length} {t('rides', 'رائڈز')}</div>
-            {periodUnpaidTotal > 0 && (
-              <div className="text-[10px] font-black text-red-500 flex items-center gap-1">
-                <AlertCircle size={11}/> {t('Fare due:', 'واجب:')} <span dir="ltr">Rs.{periodUnpaidTotal.toLocaleString()}</span>
-              </div>
-            )}
+            <div className="text-[10px] font-black text-blue-700" dir="ltr">Rs.{periodTotal.toLocaleString()}</div>
           </div>
           {periodTrips.sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(d => (
-            <div key={d.id} className={`bg-white border-2 rounded-2xl p-3 flex justify-between items-center ${d.fareReceived ? 'border-emerald-100 opacity-80' : 'border-red-100'}`}>
+            <div key={d.id} className="bg-white border-2 border-slate-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
                 <div className="font-black text-slate-800 text-sm leading-loose" style={uf}>{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
-                <div className={`text-[9px] font-bold ${d.fareReceived ? 'text-emerald-500' : 'text-red-400'}`}>
-                  {fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''} · {d.fareReceived ? t('✓ collected', '✓ وصول') : t('⏳ pending', '⏳ باقی')}
+                <div className="text-[9px] font-bold text-slate-400">
+                  {fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}
                 </div>
               </div>
-              <div className={`font-black text-sm ${d.fareReceived ? 'text-emerald-600' : 'text-red-600'}`} dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
+              <div className="font-black text-sm text-slate-700" dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
           ))}
         </div>
@@ -1782,7 +1771,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
           farePerUnit: b.fare, finalFare: b.fare * b.count,
           distanceKm: 0, ratePerKm: 0, suggestedFare: 0,
           loadDescription: '', notes: b.notes || '',
-          entryStatus: 'pending', fareReceived: false,
+          entryStatus: 'pending',
           codAmount: 0, codCollected: false, createdAt: Date.now(),
         });
       });
@@ -2105,22 +2094,20 @@ function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
     const trips       = fin.filter(d => d.riderId === r.id);
     const advEntries  = (riderAdvances || []).filter(a => a.riderId === r.id);
     const totalFare   = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
-    const fareRcvd    = trips.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
     const totalAdv    = advEntries.reduce((s, a) => s + (a.amount || 0), 0);
-    const netPayable  = totalFare - fareRcvd - totalAdv;
-    return { rider: r, trips: trips.length, tripList: trips, totalFare, fareRcvd, totalAdv, advEntries, netPayable };
+    const netPayable  = totalFare - totalAdv;
+    return { rider: r, trips: trips.length, tripList: trips, totalFare, totalAdv, advEntries, netPayable };
   }).filter(s => s.trips > 0 || s.totalAdv > 0);
 
   const grandTotal   = riderStats.reduce((s, r) => s + r.totalFare, 0);
-  const grandRcvd    = riderStats.reduce((s, r) => s + r.fareRcvd, 0);
   const grandAdv     = riderStats.reduce((s, r) => s + r.totalAdv, 0);
   const grandPayable = riderStats.reduce((s, r) => s + r.netPayable, 0);
 
   const shareReport = () => {
     const lines = riderStats.map(s =>
-      `👤 ${s.rider.name}\n  Trips: ${s.trips} | Fare: Rs.${s.totalFare.toLocaleString()}\n  Received: Rs.${s.fareRcvd.toLocaleString()} | Advance: Rs.${s.totalAdv.toLocaleString()}\n  Net Payable: Rs.${s.netPayable.toLocaleString()}`
+      `👤 ${s.rider.name}\n  Trips: ${s.trips} | Fare: Rs.${s.totalFare.toLocaleString()}\n  Paid to Rider: Rs.${s.totalAdv.toLocaleString()} | Net Payable: Rs.${s.netPayable.toLocaleString()}`
     ).join('\n\n');
-    const text = `💳 Rider Payables — Khyber Traders\n📅 Period: ${range.toUpperCase()}\n\n${lines}\n\n━━━━━━━━━━━━━━\n💰 Grand Total Fare: Rs.${grandTotal.toLocaleString()}\n✅ Total Received: Rs.${grandRcvd.toLocaleString()}\n📤 Total Advance: Rs.${grandAdv.toLocaleString()}\n🔴 Net to Pay: Rs.${grandPayable.toLocaleString()}`;
+    const text = `💳 Rider Payables — Khyber Traders\n📅 Period: ${range.toUpperCase()}\n\n${lines}\n\n━━━━━━━━━━━━━━\n💰 Grand Total Fare: Rs.${grandTotal.toLocaleString()}\n📤 Total Paid to Riders: Rs.${grandAdv.toLocaleString()}\n🔴 Net to Pay: Rs.${grandPayable.toLocaleString()}`;
     if (navigator.share) navigator.share({ text });
     else { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
   };
@@ -2226,10 +2213,9 @@ function RiderPayCard({ s, showToast, lbl }) {
 
       <div className="p-4 space-y-3">
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-slate-50 p-2 rounded-xl"><div className={lbl}>Fare</div><div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div></div>
-          <div className="bg-emerald-50 p-2 rounded-xl"><div className={`${lbl} text-emerald-600`}>Received</div><div className="font-black text-emerald-700">Rs.{s.fareRcvd.toLocaleString()}</div></div>
-          <div className="bg-amber-50 p-2 rounded-xl"><div className={`${lbl} text-amber-600`}>Advance</div><div className="font-black text-amber-700">Rs.{s.totalAdv.toLocaleString()}</div></div>
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="bg-slate-50 p-2 rounded-xl"><div className={lbl}>Fare Due</div><div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div></div>
+          <div className="bg-amber-50 p-2 rounded-xl"><div className={`${lbl} text-amber-600`}>Paid to Rider</div><div className="font-black text-amber-700">Rs.{s.totalAdv.toLocaleString()}</div></div>
         </div>
 
         {/* Net bar */}
@@ -2251,7 +2237,6 @@ function RiderPayCard({ s, showToast, lbl }) {
             tripList: s.tripList || [],
             advEntries: s.advEntries || [],
             totalFare: s.totalFare,
-            fareRcvd: s.fareRcvd,
             totalAdv: s.totalAdv,
             netPayable: s.netPayable,
           });
@@ -2400,9 +2385,8 @@ function AdminDashboard({ dispatches, riders, riderAdvances, showToast }) {
 
   // Financial
   const totalFare    = fin.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const fareRcvd     = fin.filter(d => d.fareReceived).reduce((s, d) => s + (d.finalFare || 0), 0);
   const totalAdv     = (riderAdvances || []).reduce((s, a) => s + (a.amount || 0), 0);
-  const netPayable   = totalFare - fareRcvd - totalAdv;
+  const netPayable   = totalFare - totalAdv;
 
   // COD (all time finalized)
   const totalCOD     = allFin.reduce((s, d) => s + (d.codAmount || 0), 0);
@@ -2456,19 +2440,14 @@ function AdminDashboard({ dispatches, riders, riderAdvances, showToast }) {
       {/* Financial summary */}
       <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-sm space-y-3">
         <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><DollarSign size={13}/> Financial Summary</div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div className="bg-blue-50 p-3 rounded-xl text-center">
             <div className={`${lbl} text-blue-500 mb-1`}>Total Fare</div>
             <div className="font-black text-blue-700 text-base">Rs.{totalFare.toLocaleString()}</div>
             <div className="text-[8px] text-blue-400 font-bold mt-0.5">{fin.length} trips</div>
           </div>
-          <div className="bg-emerald-50 p-3 rounded-xl text-center">
-            <div className={`${lbl} text-emerald-600 mb-1`}>Fare Received</div>
-            <div className="font-black text-emerald-700 text-base">Rs.{fareRcvd.toLocaleString()}</div>
-            <div className="text-[8px] text-emerald-500 font-bold mt-0.5">from customers</div>
-          </div>
           <div className="bg-amber-50 p-3 rounded-xl text-center">
-            <div className={`${lbl} text-amber-600 mb-1`}>Advances Paid</div>
+            <div className={`${lbl} text-amber-600 mb-1`}>Paid to Riders</div>
             <div className="font-black text-amber-700 text-base">Rs.{totalAdv.toLocaleString()}</div>
             <div className="text-[8px] text-amber-400 font-bold mt-0.5">all time</div>
           </div>
@@ -2638,7 +2617,6 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
   const [notes, setNotes]         = useState('');
   const [status, setStatus]       = useState('sent');
   const [saving, setSaving]       = useState(false);
-  const [fareReceived, setFareReceived] = useState(false);
 
   const bikeRate = dispatchSettings.bikeRate || 55;
   const rickshawRate = dispatchSettings.rickshawRate || 55;
@@ -2707,7 +2685,6 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
         finalFare: parseFloat(finalFare) || 0,
         codAmount: parseFloat(codAmount) || 0,
         codCollected,
-        fareReceived,
         notes: notes.trim(),
         status,
         entryStatus: isAdmin ? 'finalized' : 'pending',
@@ -2904,11 +2881,6 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
           </div>
         )}
 
-        {/* Fare Received toggle */}
-        <button onClick={() => setFareReceived(!fareReceived)}
-          className={`w-full py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${fareReceived ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-          {fareReceived ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received'}
-        </button>
 
         {/* COD */}
         <div className="space-y-2">
@@ -2990,7 +2962,6 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [codDone, setCodDone] = useState(d.codCollected);
-  const [fareRcvd, setFareRcvd] = useState(d.fareReceived || false);
   const m = RIDER_TYPE_META[d.riderType] || RIDER_TYPE_META.bike;
 
   // Edit state (inline)
@@ -3015,12 +2986,6 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
     showToast(next ? 'COD marked collected' : 'COD marked pending');
   };
 
-  const toggleFareReceived = async () => {
-    const next = !fareRcvd;
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { fareReceived: next });
-    setFareRcvd(next);
-    showToast(next ? 'Fare marked received' : 'Fare marked pending');
-  };
 
   const finalize = async () => {
     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), { entryStatus: 'finalized', finalizedAt: Date.now() });
@@ -3103,9 +3068,6 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-[9px] font-black uppercase ${statusColor}`}>{isRickshawCard ? statusUrdu : d.entryStatus}</span>
                 {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
-                <span className={`text-[9px] font-black uppercase ${d.fareReceived ? 'text-emerald-600' : 'text-orange-500'}`}>
-                  {isRickshawCard ? (d.fareReceived ? '✓ وصول' : '⏳ باقی') : (d.fareReceived ? '💰 Fare ✓' : '💰 Fare ⏳')}
-                </span>
               </div>
             </div>
           </div>
@@ -3138,13 +3100,6 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
           {d.loadDescription && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Load</span><span className="font-bold text-slate-700">{d.loadDescription}</span></div>}
           {d.notes && <div className="text-[10px]"><span className="font-black text-slate-400 uppercase tracking-widest block">Notes</span><span className="font-bold text-slate-700">{d.notes}</span></div>}
 
-          {/* Fare Received toggle */}
-          <button onClick={toggleFareReceived}
-            className={`w-full py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all ${fareRcvd ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
-            {isRickshawCard
-              ? (fareRcvd ? '✓ گاہک سے کرایہ وصول' : '⏳ کرایہ ابھی نہیں ملا')
-              : (fareRcvd ? '✓ Fare Received from Customer' : '⏳ Fare Not Yet Received')}
-          </button>
 
           <div className="flex gap-2 flex-wrap pt-1">
             <button onClick={share} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-[9px] font-black uppercase flex items-center gap-1">
