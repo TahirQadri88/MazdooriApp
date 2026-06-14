@@ -1505,7 +1505,7 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
   const JUNK_NOTES = ['Salary Payment', 'Payment', 'salary payment', 'payment'];
 
   const tripLines = sorted.map((d, i) => {
-    const rawKm = d.distanceKm || (d.from === 'shop' ? AREA_DISTANCES_SHOP[d.toArea] : AREA_DISTANCES[d.toArea]) || 0;
+    const rawKm = d.distanceKm || AREA_DISTANCES[d.toArea] || AREA_DISTANCES_SHOP[d.toArea] || 0;
     const km = rawKm ? `${rawKm}km` : '—';
     let line = `${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
@@ -1816,13 +1816,17 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       const batch = writeBatch(db);
       basket.forEach(b => {
         const id = `dispatch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const areaRate = rickshawAreaRates.find(r => r.area === b.area);
+        const bKm = areaRate
+          ? (from === 'shop' ? (areaRate.distanceKmShop || areaRate.distanceKm || 0) : (areaRate.distanceKm || areaRate.distanceKmShop || 0))
+          : (from === 'shop' ? (AREA_DISTANCES_SHOP[b.area] || AREA_DISTANCES[b.area] || 0) : (AREA_DISTANCES[b.area] || AREA_DISTANCES_SHOP[b.area] || 0));
         batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', id), {
           date, time: timeStr, from, fromCustom: '',
           toArea: b.area, partyName: '',
           riderType: 'rickshaw', riderId: ridesUser.id, riderName: ridesUser.name,
           rickshawCount: b.count, tripCount: b.count,
           farePerUnit: b.fare, finalFare: b.fare * b.count,
-          distanceKm: 0, ratePerKm: 0, suggestedFare: 0,
+          distanceKm: bKm, ratePerKm: 0, suggestedFare: 0,
           loadDescription: '', notes: b.notes || '',
           entryStatus: 'pending',
           codAmount: 0, codCollected: false, createdAt: Date.now(),
