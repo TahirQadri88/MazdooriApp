@@ -221,12 +221,18 @@ const getLocalDateStr = (d = new Date()) => {
   return new Date(d.getTime() - offset).toISOString().split('T')[0];
 };
 
-// Formats YYYY-MM-DD to DD-MMM-YYYY
+// Formats YYYY-MM-DD to DD-MMM-YYYY (English admin screens)
 const fmtDate = (d) => {
   if (!d) return '';
   const [y, m, day] = d.split('-');
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${day}-${months[parseInt(m, 10) - 1]}-${y}`;
+};
+// Formats YYYY-MM-DD to DD/MM/YYYY — safe in RTL context (pure numerics, no bidi confusion)
+const fmtDatePk = (d) => {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
 };
 
 const getWeekRange = () => {
@@ -1504,11 +1510,12 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const [period, setPeriod]       = useState('today');
   const [showLedger, setShowLedger] = useState(false);
   const todayStr  = getLocalDateStr();
-  const weekStart = getWeekRange().start;
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const weekStart = getLocalDateStr(sevenDaysAgo);
   const monthStart = todayStr.slice(0, 7) + '-01';
   const periodTrips = myFin.filter(d => {
     if (period === 'today') return d.date === todayStr;
-    if (period === 'week')  return d.date >= weekStart;
+    if (period === 'week')  return d.date >= weekStart && d.date <= todayStr;
     if (period === 'month') return d.date >= monthStart;
     return true;
   });
@@ -1578,7 +1585,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
               <div>
                 <div className="font-black text-slate-800 text-sm leading-loose" style={uf}>{URDU_AREA_NAMES[d.toArea] || d.toArea}</div>
                 <div className="text-[9px] font-bold text-amber-500">
-                  {d.tripCount > 1 ? `${d.tripCount} رائڈز` : '۱ رائڈ'} · {fmtDate(d.date)}
+                  {d.tripCount > 1 ? `${d.tripCount} رائڈز` : '۱ رائڈ'} · <span dir="ltr">{fmtDatePk(d.date)}</span>
                 </div>
               </div>
               <div className="font-black text-amber-700 text-right" dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
@@ -1602,7 +1609,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
               <div>
                 <div className="font-black text-slate-800 text-sm leading-loose" style={uf}>{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
                 <div className="text-[9px] font-bold text-slate-400">
-                  {fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}
+                  <span dir="ltr">{fmtDatePk(d.date)}</span>{d.tripCount > 1 ? <> · {d.tripCount} رائڈز</> : ''}
                 </div>
               </div>
               <div className="font-black text-sm text-slate-700" dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
@@ -1634,8 +1641,8 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
                   <div className={`font-black text-sm leading-loose ${isPayment ? 'text-blue-800' : 'text-amber-800'}`} style={isRickshaw ? uf : {}}>
                     {isPayment ? t('✅ Fare Payment', '✅ کرایہ ادائیگی') : t('💰 Advance', '💰 ایڈوانس')}
                   </div>
-                  <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : 'text-amber-400'}`}>
-                    {fmtDate(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' ? ` · ${a.note}` : ''}
+                  <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : 'text-amber-400'}`} dir="ltr">
+                    {fmtDatePk(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' ? ` · ${a.note}` : ''}
                   </div>
                 </div>
                 <div className={`font-black text-base ${isPayment ? 'text-blue-700' : 'text-amber-700'}`} dir="ltr">Rs.{(a.amount||0).toLocaleString()}</div>
@@ -1855,7 +1862,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="bg-white rounded-2xl p-3 border-2 border-amber-100">
             <div className={`${lbl} mb-1`}>تاریخ</div>
-            <div className="font-black text-slate-800">{fmtDate(date)}</div>
+            <div className="font-black text-slate-800" dir="ltr">{fmtDatePk(date)}</div>
           </div>
           <div className="bg-white rounded-2xl p-3 border-2 border-amber-100">
             <div className={`${lbl} mb-1`}>رکشہ والا</div>
@@ -3067,7 +3074,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
               )}
               <div className="text-[10px] font-bold text-slate-500 mt-0.5">
                 {isRickshawCard
-                  ? <>{fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}</>
+                  ? <><span dir="ltr">{fmtDatePk(d.date)}</span>{d.tripCount > 1 ? <> · {d.tripCount} رائڈز</> : ''}</>
                   : <>{d.partyName ? `${d.toArea} · ` : `${d.riderName} · `}{fmtDate(d.date)}{d.tripCount > 1 ? ` · ${d.tripCount} رائڈز` : ''}</>
                 }
               </div>
