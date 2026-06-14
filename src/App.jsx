@@ -1505,6 +1505,20 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const isRickshaw     = ridesUser.type === 'rickshaw';
   const t = (en, ur) => isRickshaw ? ur : en;
 
+  const [period, setPeriod] = useState('all');
+  const todayStr   = getLocalDateStr();
+  const weekStart  = getWeekRange().start;
+  const monthStart = todayStr.slice(0, 7) + '-01';
+  const periodTrips   = myFin.filter(d => {
+    if (period === 'today') return d.date === todayStr;
+    if (period === 'week')  return d.date >= weekStart;
+    if (period === 'month') return d.date >= monthStart;
+    return true;
+  });
+  const periodUnpaid      = periodTrips.filter(d => !d.fareReceived);
+  const periodPaid        = periodTrips.filter(d => d.fareReceived);
+  const periodUnpaidTotal = periodUnpaid.reduce((s, d) => s + (d.finalFare || 0), 0);
+
   const lbl = 'text-[8px] font-black uppercase tracking-widest';
 
   return (
@@ -1514,20 +1528,30 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         {isRickshaw && (
           <div className="text-base font-black text-slate-600 mb-2" style={{fontFamily:'serif'}}>{ridesUser.name}</div>
         )}
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${adminOwes > 0 ? 'text-blue-600' : adminOwes < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-          {adminOwes > 0
-            ? t('Admin Owes You', 'ادارے کی طرف سے دینا ہے')
-            : adminOwes < 0
-              ? t('You Owe Admin', 'آپ کے ذمے')
-              : t('All Settled', 'حساب صاف ✓')}
-        </div>
-        <div className={`text-4xl font-black ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
-          Rs.{Math.abs(adminOwes).toLocaleString()}
-        </div>
-        {advance > 0 && (
-          <div className="text-[9px] font-bold text-slate-500 mt-1">
-            {t('Advance deducted:', 'ایڈوانس کٹا:')} Rs.{advance.toLocaleString()}
+        {adminOwes === 0 ? (
+          <div className="py-1">
+            <div className="text-3xl mb-1">✓</div>
+            <div className="font-black text-lg text-emerald-700" style={isRickshaw ? {fontFamily:'serif'} : {}}>
+              {t('All Settled', 'حساب صاف')}
+            </div>
+            <div className="text-[9px] font-bold text-emerald-500 mt-1">
+              {t('No outstanding balance', 'کوئی باقی رقم نہیں')}
+            </div>
           </div>
+        ) : (
+          <>
+            <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${adminOwes > 0 ? 'text-blue-600' : 'text-amber-600'}`}>
+              {adminOwes > 0 ? t('Admin Owes You', 'ادارے کا واجب الادا') : t('You Owe Admin', 'آپ کے ذمے')}
+            </div>
+            <div className={`text-4xl font-black ${adminOwes > 0 ? 'text-blue-700' : 'text-amber-700'}`}>
+              Rs.{Math.abs(adminOwes).toLocaleString()}
+            </div>
+            {advance > 0 && (
+              <div className="text-[9px] font-bold text-slate-500 mt-1">
+                {t('Advance deducted:', 'ایڈوانس کٹا:')} Rs.{advance.toLocaleString()}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1549,6 +1573,18 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           className="w-full bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
           <Share2 size={14}/> {t('Share My Report', 'رپورٹ شیئر کریں')}
         </button>
+      )}
+
+      {/* Date period filter */}
+      {myFin.length > 0 && (
+        <div className="flex gap-1.5">
+          {[['all', t('All','سب')],['month', t('Month','ماہ')],['week', t('Week','ہفتہ')],['today', t('Today','آج')]].map(([k,l]) => (
+            <button key={k} onClick={() => setPeriod(k)}
+              className={`flex-1 py-2 text-[9px] font-black rounded-xl border-2 tracking-widest transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Pending submissions */}
@@ -1590,7 +1626,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} {t('trips', 'رائڈز')}</div>
         </div>
         <div className="bg-emerald-50 border-2 border-emerald-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-emerald-600 mb-1`}>{t('With Me', 'میرے پاس')}</div>
+          <div className={`${lbl} text-emerald-600 mb-1`}>{t('Collected', 'گاہک سے وصول')}</div>
           <div className="font-black text-emerald-700 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
           <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} {t('trips', 'رائڈز')}</div>
         </div>
@@ -1601,19 +1637,19 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       </div>
 
       {/* Unpaid trips */}
-      {unpaid.length > 0 && (
+      {periodUnpaid.length > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
-              <AlertCircle size={12}/> {t(`Pending Payment (${unpaid.length} trips)`, `باقی ادائیگی (${unpaid.length} رائڈز)`)}
+              <AlertCircle size={12}/> {t(`Pending Payment (${periodUnpaid.length} trips)`, `باقی ادائیگی (${periodUnpaid.length} رائڈز)`)}
             </div>
-            <div className="font-black text-red-600 text-sm">Rs.{unpaidTotal.toLocaleString()}</div>
+            <div className="font-black text-red-600 text-sm">Rs.{periodUnpaidTotal.toLocaleString()}</div>
           </div>
-          {unpaid.map(d => (
+          {periodUnpaid.map(d => (
             <div key={d.id} className="bg-white border-2 border-red-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
-                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName || d.toArea}</div>
-                <div className="text-[9px] font-bold text-slate-400">{d.partyName ? `${d.toArea} · ` : ''}{fmtDate(d.date)}</div>
+                <div className="font-black text-slate-800 text-sm">{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
+                <div className="text-[9px] font-bold text-slate-400">{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-red-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1622,19 +1658,19 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       )}
 
       {/* Paid trips */}
-      {paid.length > 0 && (
+      {periodPaid.length > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-              <CheckCircle size={12}/> {t(`Fare Collected (${paid.length} trips)`, `کرایہ ملا (${paid.length} رائڈز)`)}
+              <CheckCircle size={12}/> {t(`Fare Collected (${periodPaid.length} trips)`, `کرایہ وصول (${periodPaid.length} رائڈز)`)}
             </div>
-            <div className="font-black text-emerald-600 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
+            <div className="font-black text-emerald-600 text-sm">Rs.{periodPaid.reduce((s,d)=>s+(d.finalFare||0),0).toLocaleString()}</div>
           </div>
-          {paid.map(d => (
+          {periodPaid.map(d => (
             <div key={d.id} className="bg-white border-2 border-emerald-100 rounded-2xl p-3 flex justify-between items-center opacity-75">
               <div>
-                <div className="font-black text-slate-800 text-sm uppercase">{d.partyName || d.toArea}</div>
-                <div className="text-[9px] font-bold text-slate-400">{d.partyName ? `${d.toArea} · ` : ''}{fmtDate(d.date)}</div>
+                <div className="font-black text-slate-800 text-sm">{URDU_AREA_NAMES[d.toArea] || d.partyName || d.toArea}</div>
+                <div className="text-[9px] font-bold text-slate-400">{fmtDate(d.date)}</div>
               </div>
               <div className="font-black text-emerald-600">Rs.{(d.finalFare||0).toLocaleString()}</div>
             </div>
@@ -1642,6 +1678,11 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         </div>
       )}
 
+      {periodTrips.length === 0 && myFin.length > 0 && (
+        <div className="text-center text-slate-400 text-sm font-bold py-4">
+          {t('No trips in this period', 'اس مدت میں کوئی رائڈ نہیں')}
+        </div>
+      )}
       {myFin.length === 0 && (
         <div className="text-center text-slate-400 text-sm font-bold py-6">
           {t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ رائڈ نہیں')}
@@ -1682,6 +1723,60 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
 }
 
 const CAT_ORDER = ['Regular Route','Landhi','Super Highway','Gadap','Saddar','Goods Transport','Gulshan','Korangi','DHA','Gulberg','دیگر'];
+
+const URDU_AREA_NAMES = {
+  'Bhains Colony':'بھینس کالونی','Khurram Abad — Landhi':'خرم آباد — لانڈھی',
+  'Army Land — Landhi':'آرمی لینڈ — لانڈھی','Navy Land — Landhi':'نیوی لینڈ — لانڈھی',
+  'Babar Market — Landhi':'بابر مارکیٹ — لانڈھی',
+  'Jameel Memon Society (S/W)':'جمیل میمن سوسائٹی','52 Acre Scheme (S/W)':'۵۲ ایکڑ اسکیم',
+  'Nagori Society (S/W)':'ناگوری سوسائٹی','Areesha Cattle Society (S/W)':'عریشہ کیٹل سوسائٹی',
+  'Karachi Dairy & Cattle City (S/W)':'کراچی ڈیری کیٹل سٹی','Dumba Goth (S/W)':'ڈمبہ گوٹھ',
+  'Ramzan Piri (S/W)':'رمضان پیری','Solangi Stop (S/W)':'سولنگی اسٹاپ','Hashim Goth (S/W)':'ہاشم گوٹھ',
+  'Abdullah Hotel — Gadap':'عبداللہ ہوٹل — گڈاپ','TOMCL — Organic Meat Co. Gadap':'TOMCL — گڈاپ',
+  'Jumani Goth — Gadap':'جمانی گوٹھ — گڈاپ','GFA Farms — Gadap':'GFA فارمز — گڈاپ',
+  'Piyala Hotel — Gulberg':'پیالہ ہوٹل — گلبرگ','Orangi Town':'اورنگی ٹاؤن',
+  'Cantt Train Station — Saddar':'ریلوے اسٹیشن — صدر','Daewoo Terminal — Saddar':'ڈائیو ٹرمینل — صدر',
+  'Shalimar Terminal — Saddar':'شالیمار ٹرمینل — صدر','Faisal Movers — Saddar':'فیصل موورز — صدر',
+  'Intercity Bus Terminal — Saddar':'انٹرسٹی بس — صدر',
+  'Kharadar Transport Area':'کھارادر ٹرانسپورٹ','Maripur / Hawksbay':'ماری پور / ہاکس بے',
+  'DHA Phase 1':'ڈی ایچ اے فیز ۱','DHA Phase 2':'ڈی ایچ اے فیز ۲','DHA Phase 3':'ڈی ایچ اے فیز ۳',
+  'DHA Phase 4':'ڈی ایچ اے فیز ۴','DHA Phase 5':'ڈی ایچ اے فیز ۵','DHA Phase 6':'ڈی ایچ اے فیز ۶',
+  'DHA Phase 7':'ڈی ایچ اے فیز ۷','DHA Phase 8':'ڈی ایچ اے فیز ۸','DHA City (Phase 9)':'ڈی ایچ اے سٹی (فیز ۹)',
+  'R17 Warehouse → Khyber Shop (Stock Transfer)':'R17 گودام → خیبر دکان',
+  'Sohrab Goth Bus Adda → R17 Warehouse':'سہراب گوٹھ بس اڈہ → R17 گودام',
+  'Naval Colony':'نیول کالونی','Mach Goth':'ماچھ گوٹھ','Mangopir':'منگھوپیر',
+  'Gulshan Block 1':'گلشن بلاک ۱','Gulshan Block 2':'گلشن بلاک ۲','Gulshan Block 3':'گلشن بلاک ۳',
+  'Gulshan Block 4':'گلشن بلاک ۴','Gulshan Block 5':'گلشن بلاک ۵','Gulshan Block 6':'گلشن بلاک ۶',
+  'Gulshan Block 7':'گلشن بلاک ۷','Gulshan Block 8':'گلشن بلاک ۸','Gulshan Block 9':'گلشن بلاک ۹',
+  'Gulshan Block 10':'گلشن بلاک ۱۰','Gulshan Block 11':'گلشن بلاک ۱۱','Gulshan Block 12':'گلشن بلاک ۱۲',
+  'Gulshan Block 13':'گلشن بلاک ۱۳','Gulshan Block 14':'گلشن بلاک ۱۴','Gulshan Block 15':'گلشن بلاک ۱۵',
+  'Gulshan Block 16':'گلشن بلاک ۱۶','Gulshan Block 17':'گلشن بلاک ۱۷','Gulshan Block 18':'گلشن بلاک ۱۸',
+  'Gulshan Block 19':'گلشن بلاک ۱۹','Gulshan Block 20':'گلشن بلاک ۲۰','Gulshan Block 21':'گلشن بلاک ۲۱',
+  'Korangi No. 1':'کورنگی نمبر ۱','Korangi No. 2':'کورنگی نمبر ۲','Korangi No. 3':'کورنگی نمبر ۳',
+  'Korangi No. 4':'کورنگی نمبر ۴','Korangi No. 5':'کورنگی نمبر ۵','Korangi No. 6':'کورنگی نمبر ۶',
+  'Korangi Industrial Area':'کورنگی صنعتی علاقہ','Korangi Causeway':'کورنگی کاز وے','Korangi Creek':'کورنگی کریک',
+};
+
+const AREA_DISTANCES = {
+  'Bhains Colony':22,'Khurram Abad — Landhi':20,'Army Land — Landhi':21,'Navy Land — Landhi':21,'Babar Market — Landhi':19,
+  'Jameel Memon Society (S/W)':35,'52 Acre Scheme (S/W)':36,'Nagori Society (S/W)':37,'Areesha Cattle Society (S/W)':38,
+  'Karachi Dairy & Cattle City (S/W)':38,'Dumba Goth (S/W)':33,'Ramzan Piri (S/W)':34,'Solangi Stop (S/W)':34,'Hashim Goth (S/W)':32,
+  'Abdullah Hotel — Gadap':42,'TOMCL — Organic Meat Co. Gadap':44,'Jumani Goth — Gadap':45,'GFA Farms — Gadap':46,
+  'Piyala Hotel — Gulberg':12,'Orangi Town':8,
+  'Cantt Train Station — Saddar':18,'Daewoo Terminal — Saddar':18,'Shalimar Terminal — Saddar':17,
+  'Faisal Movers — Saddar':17,'Intercity Bus Terminal — Saddar':18,
+  'Kharadar Transport Area':20,'Maripur / Hawksbay':25,
+  'DHA Phase 1':28,'DHA Phase 2':30,'DHA Phase 3':32,'DHA Phase 4':33,
+  'DHA Phase 5':35,'DHA Phase 6':36,'DHA Phase 7':38,'DHA Phase 8':40,'DHA City (Phase 9)':48,
+  'R17 Warehouse → Khyber Shop (Stock Transfer)':5,'Sohrab Goth Bus Adda → R17 Warehouse':8,
+  'Naval Colony':10,'Mach Goth':6,'Mangopir':9,
+  'Gulshan Block 1':14,'Gulshan Block 2':14,'Gulshan Block 3':14,'Gulshan Block 4':15,'Gulshan Block 5':15,
+  'Gulshan Block 6':15,'Gulshan Block 7':16,'Gulshan Block 8':16,'Gulshan Block 9':16,'Gulshan Block 10':16,
+  'Gulshan Block 11':16,'Gulshan Block 12':16,'Gulshan Block 13':16,'Gulshan Block 14':16,'Gulshan Block 15':16,
+  'Gulshan Block 16':16,'Gulshan Block 17':17,'Gulshan Block 18':17,'Gulshan Block 19':17,'Gulshan Block 20':17,'Gulshan Block 21':17,
+  'Korangi No. 1':22,'Korangi No. 2':22,'Korangi No. 3':23,'Korangi No. 4':23,'Korangi No. 5':24,'Korangi No. 6':24,
+  'Korangi Industrial Area':25,'Korangi Causeway':26,'Korangi Creek':27,
+};
 
 function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [date, setDate]         = useState(getLocalDateStr());
@@ -1779,6 +1874,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
 
   const AreaBtn = ({ r }) => {
     const sel = basket.find(b => b.area === r.area);
+    const urduName = URDU_AREA_NAMES[r.area];
     return (
       <button type="button"
         onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
@@ -1788,9 +1884,15 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
             {sel.count}
           </span>
         )}
-        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
-        <div className={`text-[11px] font-black mt-1.5 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
+        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`} style={{fontFamily:'serif'}}>
+          {urduName || r.area}
+        </div>
+        {urduName && (
+          <div className={`text-[8px] mt-0.5 ${sel ? 'text-amber-200' : 'text-slate-400'}`}>{r.area}</div>
+        )}
+        <div className={`text-[11px] font-black mt-1 flex items-center justify-end gap-1 ${sel ? 'text-amber-100' : 'text-amber-600'}`} dir="ltr">
           Rs.{(r.farePerRickshaw || 0).toLocaleString()}
+          {r.distanceKm > 0 && <span className={`text-[9px] font-bold ${sel ? 'text-amber-200' : 'text-slate-400'}`}>{r.distanceKm}km</span>}
         </div>
       </button>
     );
@@ -3749,36 +3851,53 @@ const RICKSHAW_TEMPLATE_AREAS = [
 
 function RickshawRateRow({ r, showToast }) {
   const [fare, setFare] = useState((r.farePerRickshaw || '').toString());
+  const [dist, setDist] = useState((r.distanceKm || '').toString());
+  const ref = () => doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id);
+  const urduName = URDU_AREA_NAMES[r.area];
 
-  const save = async () => {
+  const saveFare = async () => {
     const amt = parseFloat(fare) || 0;
     if (amt === (r.farePerRickshaw || 0)) return;
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id), { farePerRickshaw: amt });
-    showToast(`${r.area} — Rs.${amt} saved`);
+    await updateDoc(ref(), { farePerRickshaw: amt });
+    showToast(`${urduName || r.area} — Rs.${amt} محفوظ`);
+  };
+
+  const saveDist = async () => {
+    const km = parseFloat(dist) || 0;
+    if (km === (r.distanceKm || 0)) return;
+    await updateDoc(ref(), { distanceKm: km });
+    showToast(`${urduName || r.area} — ${km} km محفوظ`);
   };
 
   const del = async () => {
-    if (!window.confirm(`Delete "${r.area}"?`)) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', r.id));
+    if (!window.confirm(`"${urduName || r.area}" حذف کریں؟`)) return;
+    await deleteDoc(ref());
   };
 
+  const numInp = (extra) => `bg-slate-50 border-2 p-1.5 rounded-xl font-black text-sm text-right outline-none ${extra}`;
+
   return (
-    <div className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex items-center gap-2">
-      <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
-      <div className="flex items-center gap-1 shrink-0" dir="ltr">
-        <span className="text-[10px] font-black text-slate-400">Rs.</span>
-        <input
-          type="number" value={fare}
-          onChange={e => setFare(e.target.value)}
-          onBlur={save}
-          onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-          placeholder="0"
-          className="w-20 bg-amber-50 border-2 border-amber-200 p-1.5 rounded-xl font-black text-amber-700 text-sm text-right outline-none focus:border-amber-500"
-        />
+    <div className="bg-white border-2 border-amber-100 rounded-2xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <button onClick={del} className="text-red-200 hover:text-red-500 p-1 transition-colors shrink-0"><Trash2 size={13}/></button>
+        <div className="text-right flex-1 min-w-0 px-2">
+          <div className="font-black text-slate-800 text-sm" style={{fontFamily:'serif'}}>{urduName || r.area}</div>
+          {urduName && <div className="text-[8px] font-bold text-slate-400 truncate">{r.area}</div>}
+        </div>
       </div>
-      <div className="flex-1 min-w-0 text-right">
-        <div className="font-black text-slate-800 text-sm truncate">{r.area}</div>
-        {r.notes && <div className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{r.notes}</div>}
+      <div className="flex gap-2" dir="ltr">
+        <div className="flex-1">
+          <div className="text-[8px] font-black text-amber-600 mb-0.5">کرایہ / Rs.</div>
+          <input type="number" value={fare} onChange={e => setFare(e.target.value)}
+            onBlur={saveFare} onKeyDown={e => e.key === 'Enter' && e.target.blur()} placeholder="0"
+            className={numInp('w-full border-amber-200 text-amber-700 focus:border-amber-500')} />
+        </div>
+        <div className="w-24">
+          <div className="text-[8px] font-black text-blue-500 mb-0.5">مسافت / km</div>
+          <input type="number" value={dist} onChange={e => setDist(e.target.value)}
+            onBlur={saveDist} onKeyDown={e => e.key === 'Enter' && e.target.blur()} placeholder="0"
+            className={numInp('w-full border-blue-200 text-blue-700 focus:border-blue-500')} />
+        </div>
       </div>
     </div>
   );
@@ -3801,18 +3920,26 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
   };
 
   const seedDefaults = async () => {
-    const existing = new Set(rickshawAreaRates.map(r => r.area));
-    const toAdd = RICKSHAW_TEMPLATE_AREAS.filter(t => !existing.has(t.area));
-    if (!toAdd.length) { showToast('تمام علاقے پہلے سے موجود ہیں — کوئی تبدیلی نہیں ہوئی'); return; }
+    const existingMap = Object.fromEntries(rickshawAreaRates.map(r => [r.area, r]));
+    const toAdd = RICKSHAW_TEMPLATE_AREAS.filter(t => !existingMap[t.area]);
+    const toUpdate = RICKSHAW_TEMPLATE_AREAS.filter(t => existingMap[t.area] && !existingMap[t.area].distanceKm && AREA_DISTANCES[t.area]);
+    if (!toAdd.length && !toUpdate.length) { showToast('تمام علاقے پہلے سے موجود ہیں — کوئی تبدیلی نہیں ہوئی'); return; }
     setSeeding(true);
     const batch = writeBatch(db);
     toAdd.forEach(t => {
       const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}_${Math.random().toString(36).slice(2,7)}`);
-      batch.set(ref, { area: t.area, farePerRickshaw: 0, notes: t.notes, createdAt: Date.now() });
+      batch.set(ref, { area: t.area, farePerRickshaw: 0, notes: t.notes, distanceKm: AREA_DISTANCES[t.area] || 0, createdAt: Date.now() });
+    });
+    toUpdate.forEach(t => {
+      const existing = existingMap[t.area];
+      batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', existing.id), { distanceKm: AREA_DISTANCES[t.area] });
     });
     await batch.commit();
     setSeeding(false);
-    showToast(`${toAdd.length} نئے علاقے شامل ہوئے — پرانے کرائے محفوظ ہیں`);
+    const msg = toAdd.length && toUpdate.length ? `${toAdd.length} نئے علاقے + ${toUpdate.length} مسافتیں اپ ڈیٹ — پرانے کرائے محفوظ`
+                : toAdd.length ? `${toAdd.length} نئے علاقے شامل ہوئے — پرانے کرائے محفوظ ہیں`
+                : `${toUpdate.length} علاقوں کی مسافت اپ ڈیٹ ہوئی`;
+    showToast(msg);
   };
 
   // Group areas by notes category
