@@ -4,7 +4,8 @@ import {
   ArrowUp, ArrowDown, Trash2, Plus,
   Image as ImageIcon, Share2, RefreshCw, DownloadCloud, UploadCloud, Info, Lock, FileDown, CalendarDays,
   Truck, User, MapPin, Package, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle,
-  DollarSign, Users, LogOut, Navigation, BarChart2, ClipboardList
+  DollarSign, Users, LogOut, Navigation, BarChart2, ClipboardList,
+  Search, X
 } from 'lucide-react';
 
 // Firebase Imports
@@ -1680,6 +1681,8 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   );
 }
 
+const CAT_ORDER = ['Regular Route','Landhi','Super Highway','Gadap','Saddar','Gulshan','Korangi','DHA','Gulberg','Goods Transport','دیگر'];
+
 function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [date, setDate]         = useState(getLocalDateStr());
   const [from, setFrom]         = useState('shop');
@@ -1688,6 +1691,14 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [customArea, setCustomArea] = useState('');
   const [customFare, setCustomFare] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch]     = useState('');
+  const [openCats, setOpenCats] = useState(() => new Set(['Regular Route', 'Landhi', 'Super Highway']));
+
+  const toggleCat = (cat) => setOpenCats(prev => {
+    const next = new Set(prev);
+    next.has(cat) ? next.delete(cat) : next.add(cat);
+    return next;
+  });
 
   const tap = (area, fare, notes = '') =>
     setBasket(prev => {
@@ -1757,9 +1768,33 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
     acc[key].push(r);
     return acc;
   }, {});
-  const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  const groups = Object.entries(grouped).sort(([a], [b]) => {
+    const ai = CAT_ORDER.indexOf(a); const bi = CAT_ORDER.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+  const searchTerm = search.trim().toLowerCase();
+  const searchResults = searchTerm ? rickshawAreaRates.filter(r => r.area.toLowerCase().includes(searchTerm)) : null;
   const lbl = 'text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1';
   const inp = 'bg-slate-50 border-2 border-slate-100 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900';
+
+  const AreaBtn = ({ r }) => {
+    const sel = basket.find(b => b.area === r.area);
+    return (
+      <button type="button"
+        onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
+        className={`relative p-3 rounded-2xl border-2 text-left active:scale-95 transition-all shadow-sm ${sel ? 'bg-amber-500 border-amber-600 shadow-amber-200' : 'bg-white border-amber-100 hover:border-amber-300'}`}>
+        {sel && (
+          <span className="absolute -top-2.5 -right-2.5 w-7 h-7 bg-emerald-500 text-white rounded-full text-xs font-black flex items-center justify-center shadow-lg border-2 border-white">
+            {sel.count}
+          </span>
+        )}
+        <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
+        <div className={`text-[11px] font-black mt-1.5 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
+          Rs.{(r.farePerRickshaw || 0).toLocaleString()}
+        </div>
+      </button>
+    );
+  };
 
   // ── Review screen ──────────────────────────────
   if (step === 'review') return (
@@ -1848,43 +1883,73 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         )}
       </div>
 
+      {/* Search bar */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-3.5 text-amber-400 pointer-events-none"/>
+        <input
+          type="text"
+          placeholder="علاقہ تلاش کریں..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full bg-white border-2 border-amber-200 pl-9 pr-9 p-3 rounded-2xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900"
+        />
+        {search && (
+          <button onClick={() => setSearch('')}
+            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={16}/>
+          </button>
+        )}
+      </div>
+
       {/* Area buttons */}
       {rickshawAreaRates.length === 0 ? (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center space-y-1">
           <div className="text-sm font-black text-amber-700" style={{fontFamily:'serif'}}>کوئی علاقہ نہیں</div>
           <div className="text-[9px] text-amber-600 font-bold">Admin → Settings → رکشہ کرایہ میں علاقے شامل کریں</div>
         </div>
-      ) : groups.map(([cat, areas]) => (
-        <div key={cat} className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <div className="text-sm font-black text-slate-700" style={{fontFamily:'serif'}}>
-              {URDU_CAT[cat] || cat}
-            </div>
-            <div className="flex-1 h-px bg-slate-200"/>
-            <div className="text-[8px] font-black text-slate-400 uppercase">{cat}</div>
+      ) : searchTerm ? (
+        searchResults.length === 0 ? (
+          <div className="text-center py-8 space-y-1">
+            <div className="text-slate-400 font-black text-sm">{search} — کوئی علاقہ نہیں ملا</div>
+            <div className="text-[9px] text-slate-300 font-bold">نیچے "الگ علاقہ" میں شامل کریں</div>
           </div>
+        ) : (
           <div className="grid grid-cols-2 gap-2">
-            {areas.map(r => {
-              const sel = basket.find(b => b.area === r.area);
-              return (
-                <button key={r.id} type="button"
-                  onClick={() => tap(r.area, r.farePerRickshaw || 0, r.notes)}
-                  className={`relative p-3.5 rounded-2xl border-2 text-left active:scale-95 transition-all shadow-sm ${sel ? 'bg-amber-500 border-amber-600 shadow-amber-200' : 'bg-white border-amber-100 hover:border-amber-300'}`}>
-                  {sel && (
-                    <span className="absolute -top-2.5 -right-2.5 w-7 h-7 bg-emerald-500 text-white rounded-full text-xs font-black flex items-center justify-center shadow-lg border-2 border-white">
-                      {sel.count}
-                    </span>
-                  )}
-                  <div className={`font-black text-xs leading-snug ${sel ? 'text-white' : 'text-slate-800'}`}>{r.area}</div>
-                  <div className={`text-[11px] font-black mt-1.5 ${sel ? 'text-amber-100' : 'text-amber-600'}`}>
-                    Rs.{(r.farePerRickshaw || 0).toLocaleString()}
-                  </div>
-                </button>
-              );
-            })}
+            {searchResults.map(r => <AreaBtn key={r.id} r={r}/>)}
           </div>
-        </div>
-      ))}
+        )
+      ) : groups.map(([cat, areas]) => {
+        const catRides = basket.filter(b => areas.find(a => a.area === b.area)).reduce((s, b) => s + b.count, 0);
+        const isOpen = openCats.has(cat);
+        return (
+          <div key={cat} className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleCat(cat)}
+              className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isOpen ? 'bg-amber-50' : 'bg-white'}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="text-sm font-black text-slate-800" style={{fontFamily:'serif'}}>
+                  {URDU_CAT[cat] || cat}
+                </div>
+                <div className="text-[8px] font-bold text-slate-300 shrink-0">{areas.length} علاقے</div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {catRides > 0 && (
+                  <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                    {catRides} رائڈز
+                  </span>
+                )}
+                <ChevronDown size={16} className={`text-amber-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}/>
+              </div>
+            </button>
+            {isOpen && (
+              <div className="p-2 grid grid-cols-2 gap-2 border-t-2 border-slate-100 bg-slate-50">
+                {areas.map(r => <AreaBtn key={r.id} r={r}/>)}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Custom area */}
       <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-3 space-y-2">
