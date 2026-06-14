@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mazdoori-cache-v2';
+const CACHE_NAME = 'mazdoori-cache-v3';
 
 // 1. Install Event: Skip waiting to immediately take control
 self.addEventListener('install', (event) => {
