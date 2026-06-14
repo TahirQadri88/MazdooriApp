@@ -1,6 +1,6 @@
 {
-  "name": "خیبر ٹریڈرز — رائڈر",
-  "short_name": "Khyber Rider",
+  "name": "KT Rider App",
+  "short_name": "KT Rider",
   "description": "Khyber Traders Rider App for dispatch entry and fare tracking",
   "start_url": "/MazdooriApp/rider/",
   "scope": "/MazdooriApp/",
