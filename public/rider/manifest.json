@@ -1,0 +1,17 @@
+{
+  "name": "خیبر ٹریڈرز — رائڈر",
+  "short_name": "Khyber Rider",
+  "description": "Khyber Traders Rider App for dispatch entry and fare tracking",
+  "start_url": "/MazdooriApp/rider/",
+  "scope": "/MazdooriApp/",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e3a8a",
+  "orientation": "portrait",
+  "lang": "ur",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/MazdooriApp/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/MazdooriApp/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

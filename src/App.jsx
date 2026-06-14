@@ -275,9 +275,12 @@ const resolveCat = (log, categories) => {
 };
 
 // --- MAIN APPLICATION ---
+const IS_RIDER_APP = localStorage.getItem('riderMode') === '1';
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
+    if (IS_RIDER_APP) return 'rides';
     const hash = window.location.hash.slice(1);
     return ['home','entry','reports','rides','admin'].includes(hash) ? hash : 'home';
   });
@@ -404,6 +407,37 @@ export default function App() {
     </div>
   );
 
+  // ── Rider-only PWA (launched from /rider/ landing page) ──
+  if (IS_RIDER_APP) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-6 w-full overflow-x-hidden" dir="rtl">
+        <header className="bg-blue-700 text-white p-4 sticky top-0 z-40 shadow-md">
+          <div className="max-w-md mx-auto text-center">
+            <h1 className="text-base font-black leading-loose" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>خیبر ٹریڈرز — رائڈر</h1>
+            <p className="text-[9px] font-bold opacity-70 tracking-widest">Khyber Traders · Rider App</p>
+          </div>
+        </header>
+        {toast && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm">
+            <div className={`flex items-center gap-3 px-4 py-4 rounded-xl shadow-2xl border-2 ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' : 'bg-red-50 border-red-500 text-red-900'}`}>
+              <Check size={20} /><span className="text-sm font-black uppercase">{toast.msg}</span>
+            </div>
+          </div>
+        )}
+        <main className="max-w-md mx-auto p-4 space-y-4">
+          <RidesGate
+            ridesUser={ridesUser} setRidesUser={setRidesUser}
+            riders={riders} dispatches={dispatches} riderAdvances={riderAdvances}
+            rickshawAreaRates={rickshawAreaRates}
+            dispatchSettings={dispatchSettings}
+            showToast={showToast}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ── Full Mazdoori App ──
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 w-full overflow-x-hidden selection:bg-blue-100">
       <header className="bg-blue-700 text-white p-4 sticky top-0 z-40 shadow-md">
@@ -439,7 +473,7 @@ export default function App() {
         {activeTab === 'home' && <HomeView logs={logs} categories={categories} />}
         {activeTab === 'entry' && <EntryView categories={categories} logs={logs} onSave={saveDaily} />}
         {activeTab === 'reports' && <ReportsView logs={logs} categories={categories} payments={payments} showToast={showToast} />}
-        
+
         {activeTab === 'admin' && !isAdminUnlocked && (
            <AdminAuthView correctPass={adminPass} onUnlock={() => setIsAdminUnlocked(true)} showToast={showToast} />
         )}
