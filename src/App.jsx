@@ -1566,7 +1566,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
               <div>
                 <div className="font-black text-slate-800 text-sm">{d.toArea}</div>
                 <div className="text-[9px] font-bold text-amber-500">
-                  {d.tripCount > 1 ? `${d.tripCount} ٹرپ` : '1 ٹرپ'} · {fmtDate(d.date)}
+                  {d.tripCount > 1 ? `${d.tripCount} رائڈز` : '1 رائڈ'} · {fmtDate(d.date)}
                 </div>
               </div>
               <div className="text-right">
@@ -1584,14 +1584,14 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {/* Breakdown */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-white border-2 border-slate-100 p-3 rounded-2xl text-center shadow-sm">
-          <div className={`${lbl} text-slate-400 mb-1`}>{t('Total Earned', 'کل کمائی')}</div>
+          <div className={`${lbl} text-slate-400 mb-1`}>{t('Total Earned', 'کل کرایہ')}</div>
           <div className="font-black text-slate-700 text-sm">Rs.{totalEarned.toLocaleString()}</div>
-          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} {t('trips', 'ٹرپ')}</div>
+          <div className="text-[8px] text-slate-400 font-bold mt-0.5">{myFin.length} {t('trips', 'رائڈز')}</div>
         </div>
         <div className="bg-emerald-50 border-2 border-emerald-100 p-3 rounded-2xl text-center shadow-sm">
           <div className={`${lbl} text-emerald-600 mb-1`}>{t('With Me', 'میرے پاس')}</div>
           <div className="font-black text-emerald-700 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
-          <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} {t('trips', 'ٹرپ')}</div>
+          <div className="text-[8px] text-emerald-500 font-bold mt-0.5">{paid.length} {t('trips', 'رائڈز')}</div>
         </div>
         <div className="bg-amber-50 border-2 border-amber-100 p-3 rounded-2xl text-center shadow-sm">
           <div className={`${lbl} text-amber-600 mb-1`}>{t('Advance', 'ایڈوانس')}</div>
@@ -1604,7 +1604,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1">
-              <AlertCircle size={12}/> {t(`Pending Payment (${unpaid.length} trips)`, `باقی ادائیگی (${unpaid.length} ٹرپ)`)}
+              <AlertCircle size={12}/> {t(`Pending Payment (${unpaid.length} trips)`, `باقی ادائیگی (${unpaid.length} رائڈز)`)}
             </div>
             <div className="font-black text-red-600 text-sm">Rs.{unpaidTotal.toLocaleString()}</div>
           </div>
@@ -1625,7 +1625,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-              <CheckCircle size={12}/> {t(`Fare Collected (${paid.length} trips)`, `کرایہ ملا (${paid.length} ٹرپ)`)}
+              <CheckCircle size={12}/> {t(`Fare Collected (${paid.length} trips)`, `کرایہ ملا (${paid.length} رائڈز)`)}
             </div>
             <div className="font-black text-emerald-600 text-sm">Rs.{alreadyWithMe.toLocaleString()}</div>
           </div>
@@ -1643,7 +1643,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
 
       {myFin.length === 0 && (
         <div className="text-center text-slate-400 text-sm font-bold py-6">
-          {t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ ٹرپ نہیں')}
+          {t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ رائڈ نہیں')}
         </div>
       )}
 
@@ -1731,7 +1731,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         });
       });
       await batch.commit();
-      showToast(`✓ ${totalTrips} ٹرپ جمع ہو گئے`);
+      showToast(`✓ ${totalTrips} رائڈز جمع ہو گئیں`);
       onDone();
     } catch (e) { showToast('خرابی / Error', 'error'); }
     setSubmitting(false);
@@ -1784,7 +1784,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
             <div key={b.area} className="bg-white border-2 border-amber-100 rounded-2xl p-3 flex justify-between items-center">
               <div>
                 <div className="font-black text-slate-800 text-sm">{b.area}</div>
-                <div className="text-[9px] font-bold text-amber-600">{b.count} ٹرپ × Rs.{b.fare.toLocaleString()}</div>
+                <div className="text-[9px] font-bold text-amber-600">{b.count === 1 ? '1 رائڈ' : `${b.count} رائڈز`} × Rs.{b.fare.toLocaleString()}</div>
               </div>
               <div className="font-black text-amber-700 text-sm">Rs.{(b.fare * b.count).toLocaleString()}</div>
             </div>
@@ -1793,7 +1793,7 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         <div className="bg-amber-600 rounded-2xl p-4 flex justify-between items-center">
           <div>
             <div className="text-[9px] font-black text-amber-100 uppercase">کل / Total</div>
-            <div className="text-[9px] font-bold text-amber-200">{totalTrips} سفر</div>
+            <div className="text-[9px] font-bold text-amber-200">{totalTrips === 1 ? '1 رائڈ' : `${totalTrips} رائڈز`}</div>
           </div>
           <div className="text-2xl font-black text-white">Rs.{totalFare.toLocaleString()}</div>
         </div>
@@ -1838,11 +1838,11 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
       <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex items-center justify-between">
         <div>
           <div className="text-lg font-black text-amber-800" style={{fontFamily:'serif'}}>علاقہ چنیں</div>
-          <div className="text-[9px] font-bold text-amber-500">ایک بار ٹیپ = ایک ٹرپ</div>
+          <div className="text-[9px] font-bold text-amber-500">ایک بار ٹیپ = ایک رائڈ</div>
         </div>
         {basket.length > 0 && (
           <div className="text-right">
-            <div className="text-[9px] font-black text-emerald-700">{totalTrips} ٹرپ</div>
+            <div className="text-[9px] font-black text-emerald-700">{totalTrips === 1 ? '1 رائڈ' : `${totalTrips} رائڈز`}</div>
             <div className="font-black text-emerald-700 text-sm">Rs.{totalFare.toLocaleString()}</div>
           </div>
         )}
@@ -1906,14 +1906,14 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
           <div className="flex items-center justify-between">
             <span className="text-sm font-black text-emerald-800" style={{fontFamily:'serif'}}>چنے ہوئے علاقے</span>
             <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              {totalTrips} ٹرپ · Rs.{totalFare.toLocaleString()}
+              {totalTrips === 1 ? '1 رائڈ' : `${totalTrips} رائڈز`} · Rs.{totalFare.toLocaleString()}
             </span>
           </div>
           {basket.map(b => (
             <div key={b.area} className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
               <div className="flex-1 min-w-0">
                 <div className="font-black text-slate-800 text-xs truncate">{b.area}</div>
-                <div className="text-[9px] font-bold text-emerald-600">Rs.{b.fare.toLocaleString()} / ٹرپ</div>
+                <div className="text-[9px] font-bold text-emerald-600">Rs.{b.fare.toLocaleString()} / رائڈ</div>
               </div>
               <button onClick={() => setCount(b.area, b.count - 1)}
                 className="w-9 h-9 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-700 flex items-center justify-center active:scale-95 transition-all text-xl">−</button>
@@ -1946,14 +1946,14 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
     <div className="space-y-4">
       <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
         <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
-          {isRickshaw ? 'میری تنخواہ' : 'My Pay'}
+          {isRickshaw ? 'میرا کرایہ' : 'My Pay'}
         </button>
         <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
-          {isRickshaw ? 'نیا ٹرپ' : 'New Trip'}
+          {isRickshaw ? 'نئی رائڈ' : 'New Trip'}
         </button>
         {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
         <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
-          {isRickshaw ? 'میرے ٹرپ' : 'My Trips'}
+          {isRickshaw ? 'میری رائڈز' : 'My Trips'}
         </button>
       </div>
       {tab === 'mypay'   && <RiderPayDash dispatches={dispatches} ridesUser={ridesUser} riderAdvances={riderAdvances} />}
@@ -2967,7 +2967,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
               <div className="text-[10px] font-bold text-slate-500 mt-0.5">
                 {d.partyName ? `${d.toArea} · ` : `${d.riderName} · `}
                 {fmtDate(d.date)}
-                {(d.tripCount > 1) && ` · ${d.tripCount} ٹرپ`}
+                {(d.tripCount > 1) && ` · ${d.tripCount} رائڈز`}
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-[9px] font-black uppercase ${statusColor}`}>{d.entryStatus}</span>
@@ -3737,7 +3737,7 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
   const seedDefaults = async () => {
     const existing = new Set(rickshawAreaRates.map(r => r.area));
     const toAdd = RICKSHAW_TEMPLATE_AREAS.filter(t => !existing.has(t.area));
-    if (!toAdd.length) { showToast('All default areas already added'); return; }
+    if (!toAdd.length) { showToast('تمام علاقے پہلے سے موجود ہیں — کوئی تبدیلی نہیں ہوئی'); return; }
     setSeeding(true);
     const batch = writeBatch(db);
     toAdd.forEach(t => {
@@ -3746,7 +3746,7 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
     });
     await batch.commit();
     setSeeding(false);
-    showToast(`${toAdd.length} علاقے شامل ہوئے / areas added — enter fares below`);
+    showToast(`${toAdd.length} نئے علاقے شامل ہوئے — پرانے کرائے محفوظ ہیں`);
   };
 
   // Group areas by notes category
@@ -3770,10 +3770,10 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
       <button onClick={seedDefaults} disabled={seeding}
         className="w-full bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
         {seeding ? <RefreshCw size={13} className="animate-spin"/> : <DownloadCloud size={13}/>}
-        {seeding ? 'Loading...' : 'Load Default Areas (علاقے لوڈ کریں)'}
+        {seeding ? 'لوڈ ہو رہا ہے...' : 'علاقے لوڈ کریں — Load Default Areas'}
       </button>
       <div className="text-[9px] text-amber-600 font-bold text-center -mt-2">
-        Tap to load all preset areas with Rs.0 — then enter fares per area below
+        صرف نئے علاقے شامل ہوں گے — پرانے کرائے محفوظ رہیں گے
       </div>
 
       {/* Add custom area */}
@@ -3792,7 +3792,7 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
       {/* Grouped rate list */}
       {groups.length === 0
         ? <div className="text-center text-amber-500 text-[10px] font-bold py-4">
-            No rates yet — tap "Load Default Areas" above
+            ابھی کوئی علاقہ نہیں — اوپر "علاقے لوڈ کریں" پر ٹیپ کریں
           </div>
         : groups.map(([category, items]) => (
             <div key={category} className="space-y-1.5">
