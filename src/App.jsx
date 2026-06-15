@@ -3152,6 +3152,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const m = RIDER_TYPE_META[d.riderType] || RIDER_TYPE_META.bike;
 
   // Edit state (inline)
+  const [eArea, setEArea]       = useState(d.toArea || '');
   const [eParty, setEParty]     = useState(d.partyName);
   const [eLoad, setELoad]       = useState(d.loadDescription || '');
   const [eFare, setEFare]       = useState(d.finalFare?.toString() || '');
@@ -3195,6 +3196,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
     const dist = parseFloat(eDist) || 0;
     const rate = parseFloat(eRate) || 0;
     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), {
+      toArea: eArea.trim() || d.toArea,
       partyName: eParty.trim(),
       loadDescription: eLoad.trim(),
       finalFare: parseFloat(eFare) || 0,
@@ -3324,6 +3326,24 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
       {expanded && editing && (
         <div className="px-4 pb-4 border-t-2 border-blue-100 pt-3 space-y-3 bg-blue-50/30">
           <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Editing Trip</div>
+          {/* Area — dropdown for bike/bykea, text for rickshaw */}
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Area</label>
+            {d.riderType !== 'rickshaw' ? (
+              <select value={eArea} onChange={e => {
+                const v = e.target.value;
+                setEArea(v);
+                const found = KARACHI_AREAS.find(a => a.name === v);
+                if (found) setEDist(String(d.from === 'shop' ? found.fromShop : found.fromWarehouse));
+              }} className={inp}>
+                <option value="">— Select Area —</option>
+                {KARACHI_AREAS.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                {!KARACHI_AREAS.find(a => a.name === eArea) && eArea && <option value={eArea}>{eArea}</option>}
+              </select>
+            ) : (
+              <input value={eArea} onChange={e => setEArea(e.target.value)} placeholder="Area name" className={inp} />
+            )}
+          </div>
           <div>
             <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Party Name</label>
             <input value={eParty} onChange={e=>setEParty(e.target.value)} className={inp} />
