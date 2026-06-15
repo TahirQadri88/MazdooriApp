@@ -1548,8 +1548,27 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const t = (en, ur) => isRickshaw ? ur : en;
   const uf = { fontFamily: "'Noto Nastaliq Urdu', serif" };
 
-  const [period, setPeriod]       = useState('today');
-  const [showLedger, setShowLedger] = useState(false);
+  const [period, setPeriod]         = useState('today');
+  const [showLedger, setShowLedger]   = useState(false);
+  const [showBillForm, setShowBillForm] = useState(false);
+  const [billAmount, setBillAmount]   = useState('');
+  const [billDate, setBillDate]       = useState(getLocalDateStr());
+  const [billSaving, setBillSaving]   = useState(false);
+
+  const saveBill = async () => {
+    const amt = parseFloat(billAmount);
+    if (!amt || amt <= 0) { showToast(isRickshaw ? 'رقم لکھیں' : 'Enter amount', 'error'); return; }
+    setBillSaving(true);
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `bill_${Date.now()}`), {
+        riderId: ridesUser.id, riderName: ridesUser.name,
+        amount: amt, type: 'bill_paid', note: 'T', date: billDate, createdAt: Date.now(),
+      });
+      setBillAmount(''); setShowBillForm(false);
+      showToast(isRickshaw ? '✓ بل محفوظ' : '✓ Bill saved');
+    } catch { showToast('Error', 'error'); }
+    setBillSaving(false);
+  };
   const todayStr  = getLocalDateStr();
   const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   const weekStart = getLocalDateStr(sevenDaysAgo);
@@ -1678,22 +1697,49 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       </button>
       {showLedger && (
         <div className="space-y-2">
+          {/* Add T Bill shortcut (rickshaw riders only) */}
+          {isRickshaw && (
+            <button onClick={() => setShowBillForm(v => !v)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-[9px] font-black text-purple-700 uppercase tracking-widest active:scale-95 transition-all">
+              <span>💸</span>
+              <span style={uf}>ٹرانسپورٹ بل (T) شامل کریں</span>
+            </button>
+          )}
+          {showBillForm && (
+            <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2" dir="ltr">
+                <input type="number" min="0" placeholder="Rs. Amount"
+                  value={billAmount} onChange={e => setBillAmount(e.target.value)}
+                  className="bg-white border-2 border-purple-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-purple-500 text-slate-900" />
+                <input type="date" value={billDate} onChange={e => setBillDate(e.target.value)}
+                  className="bg-white border-2 border-purple-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-purple-500 text-slate-900" />
+              </div>
+              <div className="flex gap-2" dir="ltr">
+                <button onClick={saveBill} disabled={billSaving}
+                  className="flex-1 bg-purple-700 disabled:opacity-50 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                  {billSaving ? '...' : t('Save Bill', 'محفوظ')}
+                </button>
+                <button onClick={() => setShowBillForm(false)} className="px-4 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">✕</button>
+              </div>
+            </div>
+          )}
           {myAdvances.length === 0 && (
             <div className="text-[10px] text-slate-500 font-bold px-1 text-center">{t('No entries', 'کوئی اندراج نہیں')}</div>
           )}
           {myAdvances.map(a => {
             const isPayment = a.type === 'payment';
+            const isBill = a.type === 'bill_paid';
             return (
-              <div key={a.id} className={`border-2 rounded-2xl p-3 flex justify-between items-center ${isPayment ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-100'}`}>
+              <div key={a.id} className={`border-2 rounded-2xl p-3 flex justify-between items-center ${isPayment ? 'bg-blue-50 border-blue-200' : isBill ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-100'}`}>
                 <div>
-                  <div className={`font-black text-sm leading-loose ${isPayment ? 'text-blue-800' : 'text-amber-800'}`} style={isRickshaw ? uf : {}}>
-                    {isPayment ? t('✅ Fare Payment', '✅ کرایہ ادائیگی') : t('💰 Advance', '💰 ایڈوانس')}
+                  <div className={`font-black text-sm leading-loose ${isPayment ? 'text-blue-800' : isBill ? 'text-purple-800' : 'text-amber-800'}`} style={isRickshaw ? uf : {}}>
+                    {isPayment ? t('✅ Fare Payment', '✅ کرایہ ادائیگی') : isBill ? t('💸 Transport Bill (T)', '💸 ٹرانسپورٹ بل (T)') : t('💰 Advance', '💰 ایڈوانس')}
                   </div>
-                  <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : 'text-amber-400'}`} dir="ltr">
-                    {fmtDatePk(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' ? ` · ${a.note}` : ''}
+                  <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : isBill ? 'text-purple-400' : 'text-amber-400'}`} dir="ltr">
+                    {fmtDatePk(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' && a.note !== 'T' ? ` · ${a.note}` : ''}
                   </div>
                 </div>
-                <div className={`font-black text-base ${isPayment ? 'text-blue-700' : 'text-amber-700'}`} dir="ltr">Rs.{(a.amount||0).toLocaleString()}</div>
+                <div className={`font-black text-base ${isPayment ? 'text-blue-700' : isBill ? 'text-purple-700' : 'text-amber-700'}`} dir="ltr">Rs.{(a.amount||0).toLocaleString()}</div>
               </div>
             );
           })}
@@ -2254,6 +2300,20 @@ function RiderPayCard({ s, showToast, lbl }) {
   const [payAmount, setPayAmount] = useState('');
   const [payDate, setPayDate]     = useState(getLocalDateStr());
   const [payNote, setPayNote]     = useState('');
+  const [showBill, setShowBill]   = useState(false);
+  const [billAmt, setBillAmt]     = useState('');
+  const [billDate, setBillDate]   = useState(getLocalDateStr());
+
+  const recordBill = async () => {
+    const amt = parseFloat(billAmt);
+    if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `bill_${Date.now()}`), {
+      riderId: s.rider.id, riderName: s.rider.name,
+      amount: amt, type: 'bill_paid', note: 'T', date: billDate, createdAt: Date.now(),
+    });
+    setShowBill(false); setBillAmt('');
+    showToast('Transport bill recorded');
+  };
 
   const recordPayment = async () => {
     const amt = parseFloat(payAmount);
@@ -2340,6 +2400,36 @@ function RiderPayCard({ s, showToast, lbl }) {
           className="w-full bg-slate-600 hover:bg-slate-700 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
           <Share2 size={13}/> Share Trip Report
         </button>
+
+        {/* Transport Bill (T) */}
+        <button onClick={() => setShowBill(v => !v)}
+          className="w-full bg-purple-700 hover:bg-purple-800 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+          <span>💸</span> Record Transport Bill (T) — {s.rider.name}
+        </button>
+        {showBill && (
+          <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-3 space-y-2">
+            <div className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Transport Bill paid by {s.rider.name} on our behalf</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Amount (Rs.)</label>
+                <input type="number" min="0" value={billAmt} onChange={e => setBillAmt(e.target.value)}
+                  className="w-full bg-white border-2 border-purple-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-purple-500 text-purple-900" />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Date</label>
+                <input type="date" value={billDate} onChange={e => setBillDate(e.target.value)}
+                  className="w-full bg-white border-2 border-purple-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-purple-500 text-slate-900" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={recordBill}
+                className="flex-1 bg-purple-700 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                Confirm T Bill
+              </button>
+              <button onClick={() => setShowBill(false)} className="px-4 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">Cancel</button>
+            </div>
+          </div>
+        )}
 
         {showPay && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 space-y-2">
