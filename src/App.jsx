@@ -410,7 +410,7 @@ export default function App() {
   // ── Rider-only PWA (launched from /rider/ landing page) ──
   if (IS_RIDER_APP) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-6 w-full overflow-x-hidden" dir="rtl">
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-6 w-full overflow-x-hidden">
         <header className="bg-blue-700 text-white p-4 sticky top-0 z-40 shadow-md">
           <div className="max-w-md mx-auto text-center">
             <h1 className="text-base font-black tracking-tight uppercase">KT Rider App</h1>
@@ -1515,7 +1515,7 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
 
   const advLines = advEntries.length > 0
     ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a => {
-        const label = a.type === 'payment' ? '✅ Fare Payment' : '💰 Advance';
+        const label = a.type === 'payment' ? '✅ Fare Payment' : a.type === 'bill_paid' ? '💸 Transport Bill (T)' : '💰 Advance';
         const note  = a.note && !JUNK_NOTES.includes(a.note) ? ` | ${a.note}` : '';
         return `${label} | Rs.${(a.amount || 0).toLocaleString()} | ${fmtDatePk(a.date)}${note}`;
       }).join('\n')
@@ -1541,8 +1541,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const myFin       = dispatches.filter(d => d.riderId === ridesUser.id && d.entryStatus === 'finalized');
   const totalEarned = myFin.reduce((s, d) => s + (d.finalFare || 0), 0);
   const myAdvances  = (riderAdvances || []).filter(a => a.riderId === ridesUser.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  const advance     = myAdvances.reduce((s, a) => s + (a.amount || 0), 0);
-  const adminOwes   = totalEarned - advance;
+  const advance     = myAdvances.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const billsPaid   = myAdvances.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const adminOwes   = totalEarned + billsPaid - advance;
   const isRickshaw  = ridesUser.type === 'rickshaw';
   const t = (en, ur) => isRickshaw ? ur : en;
   const uf = { fontFamily: "'Noto Nastaliq Urdu', serif" };
@@ -1584,6 +1585,13 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div className="text-sm font-black text-slate-600" style={isRickshaw ? uf : {}}>{t('Fare Due', 'کرایہ واجب')}</div>
             <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{totalEarned.toLocaleString()}</div>
           </div>
+          {/* Row 1b — Bills Paid (only if any) */}
+          {billsPaid > 0 && (
+            <div className="flex justify-between items-center py-3">
+              <div className="text-sm font-black text-blue-600" style={isRickshaw ? uf : {}}>{t('Bills Paid by You (+)', 'ٹرانسپورٹ بل (+)')}</div>
+              <div className="font-black text-blue-600 text-base" dir="ltr">Rs.{billsPaid.toLocaleString()}</div>
+            </div>
+          )}
           {/* Row 2 — Received */}
           <div className="flex justify-between items-center py-3">
             <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Payments Received', 'وصول ہوا (ادائیگی)')}</div>
@@ -1774,6 +1782,7 @@ const AREA_DISTANCES_SHOP = {
 function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
   const [date, setDate]         = useState(getLocalDateStr());
   const [from, setFrom]         = useState('shop');
+  const [transportBill, setTransportBill] = useState('');
   const [basket, setBasket]     = useState([]);
   const [step, setStep]         = useState('pick');
   const [customArea, setCustomArea] = useState('');
@@ -1834,6 +1843,13 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
         });
       });
       await batch.commit();
+      const tBill = parseFloat(transportBill) || 0;
+      if (tBill > 0) {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `bill_${Date.now()}`), {
+          riderId: ridesUser.id, riderName: ridesUser.name,
+          amount: tBill, type: 'bill_paid', note: 'T', date, createdAt: Date.now(),
+        });
+      }
       showToast(`✓ ${totalTrips} رائڈز جمع ہو گئیں`);
       onDone();
     } catch (e) { showToast('خرابی / Error', 'error'); }
@@ -1930,6 +1946,26 @@ function RickshawDayEntry({ rickshawAreaRates, ridesUser, showToast, onDone }) {
             <div className="text-[9px] font-bold text-amber-200">{totalTrips === 1 ? '1 رائڈ' : `${totalTrips} رائڈز`}</div>
           </div>
           <div className="text-2xl font-black text-white">Rs.{totalFare.toLocaleString()}</div>
+        </div>
+
+        {/* Transport Bill */}
+        <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 space-y-1">
+          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
+            ٹرانسپورٹ بل (T) — آپ نے ہماری طرف سے ادا کیا
+          </label>
+          <div className="flex items-center gap-2" dir="ltr">
+            <span className="text-[10px] font-black text-slate-500">Rs.</span>
+            <input
+              type="number" min="0" placeholder="0"
+              value={transportBill} onChange={e => setTransportBill(e.target.value)}
+              className="flex-1 bg-white border-2 border-slate-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-400 text-slate-900"
+            />
+          </div>
+          {(parseFloat(transportBill) || 0) > 0 && (
+            <div className="text-[9px] font-bold text-blue-600" style={{fontFamily:"'Noto Nastaliq Urdu', serif"}}>
+              Rs.{(parseFloat(transportBill)||0).toLocaleString()} ادارے کے ذمے
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-3">
@@ -2152,9 +2188,10 @@ function RiderPayables({ dispatches, riders, riderAdvances, showToast }) {
     const trips       = fin.filter(d => d.riderId === r.id);
     const advEntries  = (riderAdvances || []).filter(a => a.riderId === r.id);
     const totalFare   = trips.reduce((s, d) => s + (d.finalFare || 0), 0);
-    const totalAdv    = advEntries.reduce((s, a) => s + (a.amount || 0), 0);
-    const netPayable  = totalFare - totalAdv;
-    return { rider: r, trips: trips.length, tripList: trips, totalFare, totalAdv, advEntries, netPayable };
+    const totalAdv    = advEntries.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const billsPaid   = advEntries.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const netPayable  = totalFare + billsPaid - totalAdv;
+    return { rider: r, trips: trips.length, tripList: trips, totalFare, totalAdv, billsPaid, advEntries, netPayable };
   }).filter(s => s.trips > 0 || s.totalAdv > 0);
 
   const grandTotal   = riderStats.reduce((s, r) => s + r.totalFare, 0);
@@ -2359,12 +2396,15 @@ function RiderPayCard({ s, showToast, lbl }) {
             {s.advEntries.length === 0 && <div className="text-[10px] text-slate-400 font-bold text-center py-2">No entries yet</div>}
             {[...s.advEntries].sort((a,b) => b.createdAt - a.createdAt).map(a => {
               const isPayment = a.type === 'payment';
+              const isBill = a.type === 'bill_paid';
               return (
-                <div key={a.id} className={`flex items-center justify-between border-2 rounded-xl p-3 ${isPayment ? 'bg-blue-50 border-blue-200' : 'bg-white border-amber-100'}`}>
+                <div key={a.id} className={`flex items-center justify-between border-2 rounded-xl p-3 ${isPayment ? 'bg-blue-50 border-blue-200' : isBill ? 'bg-purple-50 border-purple-200' : 'bg-white border-amber-100'}`}>
                   <div>
-                    <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : 'text-amber-500'}`}>{isPayment ? '✅ Payment' : '💰 Advance'}</div>
+                    <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isPayment ? 'text-blue-500' : isBill ? 'text-purple-600' : 'text-amber-500'}`}>
+                      {isPayment ? '✅ Payment' : isBill ? '💸 Transport Bill (T)' : '💰 Advance'}
+                    </div>
                     <div className="font-black text-slate-800 text-sm">Rs.{(a.amount||0).toLocaleString()}</div>
-                    <div className="text-[9px] font-bold text-slate-400">{fmtDate(a.date)} · {a.note}</div>
+                    <div className="text-[9px] font-bold text-slate-400">{fmtDate(a.date)}{a.note && a.note !== 'T' ? ` · ${a.note}` : ''}</div>
                   </div>
                   <button onClick={() => delAdvance(a.id)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={14}/></button>
                 </div>
