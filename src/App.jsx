@@ -2265,14 +2265,14 @@ function RiderView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispa
   return (
     <div className="space-y-4" dir={isRickshaw ? 'rtl' : undefined}>
       <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex shadow-sm">
-        <button onClick={() => setTab('mypay')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+        <button onClick={() => setTab('mypay')} style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}} className={`flex-1 py-3 text-sm font-black rounded-xl transition-all ${tab === 'mypay' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600'}`}>
           {isRickshaw ? 'میرا کرایہ' : 'My Pay'}
         </button>
-        <button onClick={() => setTab('new')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+        <button onClick={() => setTab('new')} style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}} className={`flex-1 py-3 text-sm font-black rounded-xl transition-all ${tab === 'new' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600'}`}>
           {isRickshaw ? 'نئی رائڈ' : 'New Trip'}
         </button>
-        {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>Bykea</button>}
-        <button onClick={() => setTab('history')} className={`flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+        {isBykea && <button onClick={() => setTab('bykea')} className={`flex-1 py-3 text-sm font-black rounded-xl transition-all ${tab === 'bykea' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600'}`}>Bykea</button>}
+        <button onClick={() => setTab('history')} style={isRickshaw ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}} className={`flex-1 py-3 text-sm font-black rounded-xl transition-all ${tab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600'}`}>
           {isRickshaw ? 'میری رائڈز' : 'My Trips'}
         </button>
       </div>
