@@ -1675,7 +1675,8 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       <div className="flex gap-1.5">
         {[['today', t('Today','آج')],['week', t('Week','ہفتہ')],['month', t('Month','ماہ')],['all', t('All','سب')],['custom', t('Custom','تاریخ')]].map(([k,l]) => (
           <button key={k} onClick={() => setPeriod(k)}
-            className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 tracking-widest transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+            className={`flex-1 py-3 text-sm font-black rounded-xl border-2 transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-300 text-slate-700'}`}
+            style={isRickshaw ? uf : {}}>
             {l}
           </button>
         ))}
