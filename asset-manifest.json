@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/MazdooriApp/static/css/main.21df6c63.css",
-    "main.js": "/MazdooriApp/static/js/main.25cbcb3d.js",
+    "main.css": "/MazdooriApp/static/css/main.5038b84a.css",
+    "main.js": "/MazdooriApp/static/js/main.237dc52d.js",
     "index.html": "/MazdooriApp/index.html",
-    "main.21df6c63.css.map": "/MazdooriApp/static/css/main.21df6c63.css.map",
-    "main.25cbcb3d.js.map": "/MazdooriApp/static/js/main.25cbcb3d.js.map"
+    "main.5038b84a.css.map": "/MazdooriApp/static/css/main.5038b84a.css.map",
+    "main.237dc52d.js.map": "/MazdooriApp/static/js/main.237dc52d.js.map"
   },
   "entrypoints": [
-    "static/css/main.21df6c63.css",
-    "static/js/main.25cbcb3d.js"
+    "static/css/main.5038b84a.css",
+    "static/js/main.237dc52d.js"
   ]
 }
