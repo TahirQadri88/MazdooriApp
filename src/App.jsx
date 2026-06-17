@@ -1575,6 +1575,8 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const uf = { fontFamily: "'Noto Nastaliq Urdu', serif" };
 
   const [period, setPeriod]         = useState('today');
+  const [customStart, setCustomStart] = useState(getLocalDateStr());
+  const [customEnd, setCustomEnd]     = useState(getLocalDateStr());
   const [showLedger, setShowLedger]   = useState(false);
   const [showBillForm, setShowBillForm] = useState(false);
   const [billAmount, setBillAmount]   = useState('');
@@ -1600,9 +1602,10 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const weekStart = getLocalDateStr(sevenDaysAgo);
   const monthStart = todayStr.slice(0, 7) + '-01';
   const periodTrips = myFin.filter(d => {
-    if (period === 'today') return d.date === todayStr;
-    if (period === 'week')  return d.date >= weekStart && d.date <= todayStr;
-    if (period === 'month') return d.date >= monthStart;
+    if (period === 'today')  return d.date === todayStr;
+    if (period === 'week')   return d.date >= weekStart && d.date <= todayStr;
+    if (period === 'month')  return d.date >= monthStart;
+    if (period === 'custom') return d.date >= customStart && d.date <= customEnd;
     return true;
   });
   const periodTotal = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
@@ -1656,13 +1659,27 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
 
       {/* ── Period filter ── */}
       <div className="flex gap-1.5">
-        {[['today', t('Today','آج')],['week', t('Week','ہفتہ')],['month', t('Month','ماہ')],['all', t('All','سب')]].map(([k,l]) => (
+        {[['today', t('Today','آج')],['week', t('Week','ہفتہ')],['month', t('Month','ماہ')],['all', t('All','سب')],['custom', t('Custom','تاریخ')]].map(([k,l]) => (
           <button key={k} onClick={() => setPeriod(k)}
-            className={`flex-1 py-2.5 text-[10px] font-black rounded-xl border-2 tracking-widest transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+            className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 tracking-widest transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
             {l}
           </button>
         ))}
       </div>
+      {period === 'custom' && (
+        <div className="grid grid-cols-2 gap-2" dir="ltr">
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('From','سے')}</label>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('To','تک')}</label>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+        </div>
+      )}
 
       {/* ── Pending review ── */}
       {myPending.length > 0 && (
