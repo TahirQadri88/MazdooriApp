@@ -1601,19 +1601,25 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   const weekStart = getLocalDateStr(sevenDaysAgo);
   const monthStart = todayStr.slice(0, 7) + '-01';
-  const periodTrips = myFin.filter(d => {
+  const inPeriod = d => {
     if (period === 'today')  return d.date === todayStr;
     if (period === 'week')   return d.date >= weekStart && d.date <= todayStr;
     if (period === 'month')  return d.date >= monthStart;
     if (period === 'custom') return d.date >= customStart && d.date <= customEnd;
     return true;
-  });
-  const periodTotal = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
-  const periodLabel = period === 'today'  ? t('Today', 'آج')
-                    : period === 'week'   ? t('This Week', 'اس ہفتے')
-                    : period === 'month'  ? t('This Month', 'اس مہینے')
-                    : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
-                    : t('All Time', 'کل وقت');
+  };
+  const periodTrips    = myFin.filter(inPeriod);
+  const periodAdvances = myAdvances.filter(inPeriod);
+  const periodEarned   = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const periodBills    = periodAdvances.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const periodPayments = periodAdvances.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const periodBalance  = periodEarned + periodBills - periodPayments;
+  const periodTotal    = periodEarned;
+  const periodLabel    = period === 'today'  ? t('Today', 'آج')
+                       : period === 'week'   ? t('This Week', 'اس ہفتے')
+                       : period === 'month'  ? t('This Month', 'اس مہینے')
+                       : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
+                       : t('All Time', 'کل وقت');
 
   return (
     <div className="space-y-4 pb-10">
@@ -1623,7 +1629,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         <div className="bg-blue-700 px-5 py-3 flex items-center justify-between">
           <div>
             <div className="text-white font-black text-base leading-loose" style={isRickshaw ? uf : {}}>{ridesUser.name}</div>
-            <div className="text-blue-200 text-[9px] font-black uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Overall Balance — All Time', 'مجموعی حساب — کل وقت')}</div>
+            <div className="text-blue-200 text-[9px] font-black uppercase tracking-widest" style={isRickshaw ? uf : {}}>{periodLabel}</div>
           </div>
           {myFin.length > 0 && (
             <button onClick={() => {
@@ -1639,27 +1645,27 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           {/* Row 1 — Fare Due */}
           <div className="flex justify-between items-center py-3">
             <div className="text-sm font-black text-slate-600" style={isRickshaw ? uf : {}}>{t('Fare Due', 'کرایہ واجب')}</div>
-            <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{totalEarned.toLocaleString()}</div>
+            <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{periodEarned.toLocaleString()}</div>
           </div>
           {/* Row 1b — Bills Paid (only if any) */}
-          {billsPaid > 0 && (
+          {periodBills > 0 && (
             <div className="flex justify-between items-center py-3">
               <div className="text-sm font-black text-blue-600" style={isRickshaw ? uf : {}}>{t('Bills Paid by You (+)', 'ٹرانسپورٹ بل (+)')}</div>
-              <div className="font-black text-blue-600 text-base" dir="ltr">Rs.{billsPaid.toLocaleString()}</div>
+              <div className="font-black text-blue-600 text-base" dir="ltr">Rs.{periodBills.toLocaleString()}</div>
             </div>
           )}
           {/* Row 2 — Received */}
           <div className="flex justify-between items-center py-3">
             <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Payments Received', 'وصول ہوا (ادائیگی)')}</div>
-            <div className="font-black text-emerald-700 text-base" dir="ltr">Rs.{advance.toLocaleString()}</div>
+            <div className="font-black text-emerald-700 text-base" dir="ltr">Rs.{periodPayments.toLocaleString()}</div>
           </div>
           {/* Row 3 — Balance */}
-          <div className={`flex justify-between items-center py-3 ${adminOwes === 0 ? '' : 'pt-4'}`}>
-            <div className={`text-sm font-black ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-600'}`} style={isRickshaw ? uf : {}}>
-              {adminOwes > 0 ? t('Admin Owes You', 'ادارے کا واجب') : adminOwes < 0 ? t('You Owe', 'آپ کے ذمے') : t('Settled ✓', 'حساب صاف ✓')}
+          <div className={`flex justify-between items-center py-3 ${periodBalance === 0 ? '' : 'pt-4'}`}>
+            <div className={`text-sm font-black ${periodBalance > 0 ? 'text-blue-700' : periodBalance < 0 ? 'text-amber-700' : 'text-emerald-600'}`} style={isRickshaw ? uf : {}}>
+              {periodBalance > 0 ? t('Admin Owes You', 'ادارے کا واجب') : periodBalance < 0 ? t('You Owe', 'آپ کے ذمے') : t('Settled ✓', 'حساب صاف ✓')}
             </div>
-            <div className={`font-black text-xl ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-600'}`} dir="ltr">
-              {adminOwes === 0 ? '—' : `Rs.${Math.abs(adminOwes).toLocaleString()}`}
+            <div className={`font-black text-xl ${periodBalance > 0 ? 'text-blue-700' : periodBalance < 0 ? 'text-amber-700' : 'text-emerald-600'}`} dir="ltr">
+              {periodBalance === 0 ? '—' : `Rs.${Math.abs(periodBalance).toLocaleString()}`}
             </div>
           </div>
         </div>
