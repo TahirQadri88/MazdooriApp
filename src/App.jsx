@@ -1633,6 +1633,31 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   return (
     <div className="space-y-4 pb-10">
 
+      {/* ── Period filter ── */}
+      <div className="flex gap-1.5">
+        {[['today', t('Today','آج')],['week', t('Week','ہفتہ')],['month', t('Month','ماہ')],['all', t('All','سب')],['custom', t('Custom','تاریخ')]].map(([k,l]) => (
+          <button key={k} onClick={() => setPeriod(k)}
+            className={`flex-1 py-3 text-sm font-black rounded-xl border-2 transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-300 text-slate-700'}`}
+            style={isRickshaw ? uf : {}}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {period === 'custom' && (
+        <div className="grid grid-cols-2 gap-2" dir="ltr">
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('From','سے')}</label>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('To','تک')}</label>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+        </div>
+      )}
+
       {/* ── Main summary card ── */}
       <div className="bg-white rounded-3xl border-2 border-slate-100 shadow-sm overflow-hidden">
         <div className="bg-blue-700 px-5 py-3 flex items-center justify-between">
@@ -1683,31 +1708,6 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           </div>
         </div>
       </div>
-
-      {/* ── Period filter ── */}
-      <div className="flex gap-1.5">
-        {[['today', t('Today','آج')],['week', t('Week','ہفتہ')],['month', t('Month','ماہ')],['all', t('All','سب')],['custom', t('Custom','تاریخ')]].map(([k,l]) => (
-          <button key={k} onClick={() => setPeriod(k)}
-            className={`flex-1 py-3 text-sm font-black rounded-xl border-2 transition-all ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-300 text-slate-700'}`}
-            style={isRickshaw ? uf : {}}>
-            {l}
-          </button>
-        ))}
-      </div>
-      {period === 'custom' && (
-        <div className="grid grid-cols-2 gap-2" dir="ltr">
-          <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('From','سے')}</label>
-            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
-          </div>
-          <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{t('To','تک')}</label>
-            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
-          </div>
-        </div>
-      )}
 
       {/* ── Pending review ── */}
       {myPending.length > 0 && (
