@@ -1609,6 +1609,11 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
     return true;
   });
   const periodTotal = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const periodLabel = period === 'today'  ? t('Today', 'آج')
+                    : period === 'week'   ? t('This Week', 'اس ہفتے')
+                    : period === 'month'  ? t('This Month', 'اس مہینے')
+                    : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
+                    : t('All Time', 'کل وقت');
 
   return (
     <div className="space-y-4 pb-10">
@@ -1711,7 +1716,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {periodTrips.length > 0 ? (
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
-            <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{periodTrips.length} {t('rides', 'رائڈز')}</div>
+            <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest" style={isRickshaw ? uf : {}}>
+              {periodLabel} · {periodTrips.length} {t('rides', 'رائڈز')}
+            </div>
             <div className="text-[10px] font-black text-blue-700" dir="ltr">Rs.{periodTotal.toLocaleString()}</div>
           </div>
           {periodTrips.sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(d => (
@@ -1728,7 +1735,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
         </div>
       ) : (
         <div className="text-center text-amber-500 text-sm font-bold py-4" style={isRickshaw ? uf : {}}>
-          {myFin.length === 0 ? t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ رائڈ نہیں') : t('No rides in this period', 'اس مدت میں کوئی رائڈ نہیں')}
+          {myFin.length === 0 ? t('No finalized trips yet', 'ابھی کوئی تصدیق شدہ رائڈ نہیں') : `${t('No rides for', 'کوئی رائڈ نہیں')} — ${periodLabel}`}
         </div>
       )}
 
