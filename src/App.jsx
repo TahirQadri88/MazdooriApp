@@ -1621,7 +1621,10 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
       {/* ── Main summary card ── */}
       <div className="bg-white rounded-3xl border-2 border-slate-100 shadow-sm overflow-hidden">
         <div className="bg-blue-700 px-5 py-3 flex items-center justify-between">
-          <div className="text-white font-black text-base leading-loose" style={isRickshaw ? uf : {}}>{ridesUser.name}</div>
+          <div>
+            <div className="text-white font-black text-base leading-loose" style={isRickshaw ? uf : {}}>{ridesUser.name}</div>
+            <div className="text-blue-200 text-[9px] font-black uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Overall Balance — All Time', 'مجموعی حساب — کل وقت')}</div>
+          </div>
           {myFin.length > 0 && (
             <button onClick={() => {
               const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, totalAdv: advance, netPayable: adminOwes });
