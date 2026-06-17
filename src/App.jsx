@@ -1656,13 +1656,17 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div className="text-sm font-black text-slate-600" style={isRickshaw ? uf : {}}>{t('Fare Due', 'کرایہ واجب')}</div>
             <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{periodEarned.toLocaleString()}</div>
           </div>
-          {/* Row 1b — Bills Paid (only if any) */}
-          {periodBills > 0 && (
+          {/* Row 1b — Bills Paid (only if any) + Subtotal */}
+          {periodBills > 0 && (<>
             <div className="flex justify-between items-center py-3">
               <div className="text-sm font-black text-blue-600" style={isRickshaw ? uf : {}}>{t('Bills Paid by You (+)', 'ٹرانسپورٹ بل (+)')}</div>
               <div className="font-black text-blue-600 text-base" dir="ltr">Rs.{periodBills.toLocaleString()}</div>
             </div>
-          )}
+            <div className="flex justify-between items-center py-2 bg-slate-50 -mx-5 px-5">
+              <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Subtotal', 'کل واجب')}</div>
+              <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{(periodEarned + periodBills).toLocaleString()}</div>
+            </div>
+          </>)}
           {/* Row 2 — Received */}
           <div className="flex justify-between items-center py-3">
             <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Payments Received', 'وصول ہوا (ادائیگی)')}</div>
