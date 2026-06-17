@@ -4122,18 +4122,22 @@ function RickshawRateRow({ r, showToast }) {
 }
 
 function RickshawRatesManager({ rickshawAreaRates, showToast }) {
-  const [area, setArea]   = useState('');
-  const [fare, setFare]   = useState('');
-  const [notes, setNotes] = useState('');
-  const [seeding, setSeeding] = useState(false);
+  const [area, setArea]         = useState('');
+  const [fare, setFare]         = useState('');
+  const [notes, setNotes]       = useState('');
+  const [newCat, setNewCat]     = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+  const [seeding, setSeeding]   = useState(false);
   const inp = 'bg-white border-2 border-amber-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-amber-400 text-slate-900 w-full';
+
+  const effectiveNotes = addingCat ? newCat.trim() : notes;
 
   const addOne = async () => {
     if (!area.trim()) { showToast('علاقہ درج کریں / Enter area name', 'error'); return; }
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rickshawAreaRates', `rate_${Date.now()}`), {
-      area: area.trim(), farePerRickshaw: parseFloat(fare) || 0, notes: notes.trim(), createdAt: Date.now(),
+      area: area.trim(), farePerRickshaw: parseFloat(fare) || 0, notes: effectiveNotes, createdAt: Date.now(),
     });
-    setArea(''); setFare(''); setNotes('');
+    setArea(''); setFare(''); setNotes(''); setNewCat(''); setAddingCat(false);
     showToast('Area added');
   };
 
@@ -4194,9 +4198,28 @@ function RickshawRatesManager({ rickshawAreaRates, showToast }) {
           <input placeholder="Area name" value={area} onChange={e => setArea(e.target.value)} className={inp} />
           <input type="number" placeholder="Fare Rs." value={fare} onChange={e => setFare(e.target.value)} className={inp} />
         </div>
-        <div className="flex gap-2">
-          <input placeholder="Category / Notes" value={notes} onChange={e => setNotes(e.target.value)} className={`flex-1 ${inp}`} />
-          <button onClick={addOne} className="bg-amber-500 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all">Add</button>
+        <div className="space-y-2">
+          {!addingCat ? (
+            <div className="flex gap-2">
+              <select value={notes} onChange={e => {
+                if (e.target.value === '__new__') { setAddingCat(true); setNotes(''); }
+                else setNotes(e.target.value);
+              }} className={`flex-1 ${inp}`}>
+                <option value="">— Select Category —</option>
+                {groups.map(([cat]) => <option key={cat} value={cat}>{cat}</option>)}
+                <option value="__new__">＋ Add new category…</option>
+              </select>
+              <button onClick={addOne} className="bg-amber-500 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all">Add</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input autoFocus placeholder="New category name" value={newCat} onChange={e => setNewCat(e.target.value)}
+                className={`flex-1 ${inp}`} />
+              <button onClick={() => { setAddingCat(false); setNotes(''); }}
+                className="bg-slate-200 text-slate-600 font-black px-3 py-2 rounded-xl text-xs active:scale-95 transition-all">✕</button>
+              <button onClick={addOne} className="bg-amber-500 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all">Add</button>
+            </div>
+          )}
         </div>
       </div>
 
