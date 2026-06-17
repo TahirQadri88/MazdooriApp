@@ -1524,7 +1524,7 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
   );
 }
 
-function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv, netPayable }) {
+function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv, billsPaid, netPayable }) {
   const today = getLocalDateStr();
   const sep = '─────────────────────────';
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -1553,7 +1553,12 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
     sep,
     tripLines || 'No trips',
     sep,
-    `Fare: Rs.${totalFare.toLocaleString()} | Paid to Rider: Rs.${totalAdv.toLocaleString()} | *NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
+    [
+      `Fare: Rs.${totalFare.toLocaleString()}`,
+      billsPaid > 0 ? `T Bills (+): Rs.${billsPaid.toLocaleString()}` : null,
+      `Payments Received: Rs.${totalAdv.toLocaleString()}`,
+      `*NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
+    ].filter(Boolean).join(' | '),
   ];
   if (advEntries.length > 0) {
     parts.push(sep, `Ledger:`, advLines);
@@ -1633,7 +1638,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           </div>
           {myFin.length > 0 && (
             <button onClick={() => {
-              const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, totalAdv: advance, netPayable: adminOwes });
+              const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, totalAdv: advance, billsPaid, netPayable: adminOwes });
               if (navigator.share) navigator.share({ title: `Pay Report — ${ridesUser.name}`, text });
               else { navigator.clipboard.writeText(text); }
             }} className="flex items-center gap-1 text-[9px] font-black text-blue-200 hover:text-white uppercase tracking-widest">
@@ -2452,6 +2457,7 @@ function RiderPayCard({ s, showToast, lbl }) {
             advEntries: s.advEntries || [],
             totalFare: s.totalFare,
             totalAdv: s.totalAdv,
+            billsPaid: s.billsPaid || 0,
             netPayable: s.netPayable,
           });
           if (navigator.share) navigator.share({ title: `Payment Report — ${s.rider.name}`, text });
