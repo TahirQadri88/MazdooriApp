@@ -1525,16 +1525,20 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 }
 
 function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv, billsPaid, netPayable }) {
-  const today = getLocalDateStr();
   const sep = '─────────────────────────';
+  const LTR = '‎'; // left-to-right mark — stops WhatsApp flipping RTL lines
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const JUNK_NOTES = ['Salary Payment', 'Payment', 'salary payment', 'payment'];
+
+  const firstDate = sorted.length ? fmtDatePk(sorted[0].date) : '';
+  const lastDate  = sorted.length ? fmtDatePk(sorted[sorted.length - 1].date) : '';
+  const dateRange = firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
 
   const tripLines = sorted.map((d, i) => {
     const rawKm = d.distanceKm || AREA_DISTANCES[d.toArea] || AREA_DISTANCES_SHOP[d.toArea] || 0;
     const totalKm = rawKm * (d.rickshawCount || 1);
     const km = totalKm ? `${totalKm}km` : '—';
-    let line = `${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
+    let line = `${LTR}${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
     if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
     return line;
   }).join('\n');
@@ -1543,13 +1547,13 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
     ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a => {
         const label = a.type === 'payment' ? '✅ Fare Payment' : a.type === 'bill_paid' ? '💸 Transport Bill (T)' : '💰 Advance';
         const note  = a.note && !JUNK_NOTES.includes(a.note) ? ` | ${a.note}` : '';
-        return `${label} | Rs.${(a.amount || 0).toLocaleString()} | ${fmtDatePk(a.date)}${note}`;
+        return `${LTR}${label} | Rs.${(a.amount || 0).toLocaleString()} | ${fmtDatePk(a.date)}${note}`;
       }).join('\n')
     : 'No entries';
 
   const parts = [
     `📋 ${riderName.toUpperCase()} — Khyber Traders`,
-    `Date: ${fmtDatePk(today)} | Trips: ${tripList.length}`,
+    `Period: ${dateRange} | Trips: ${tripList.length}`,
     sep,
     tripLines || 'No trips',
     sep,
