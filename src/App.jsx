@@ -1590,6 +1590,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const [showBillForm, setShowBillForm] = useState(false);
   const [billAmount, setBillAmount]   = useState('');
   const [billDate, setBillDate]       = useState(getLocalDateStr());
+  const [editingBillId, setEditingBillId] = useState(null);
+  const [editBillAmt, setEditBillAmt]     = useState('');
+  const [editBillDate, setEditBillDate]   = useState('');
   const [billSaving, setBillSaving]   = useState(false);
 
   const saveBill = async () => {
@@ -1606,6 +1609,21 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
     } catch { showToast('Error', 'error'); }
     setBillSaving(false);
   };
+
+  const saveBillEdit = async () => {
+    const amt = parseFloat(editBillAmt);
+    if (!amt || amt <= 0) { showToast('Enter amount', 'error'); return; }
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', editingBillId), { amount: amt, date: editBillDate });
+    setEditingBillId(null);
+    showToast(isRickshaw ? '✓ بل اپ ڈیٹ' : '✓ Bill updated');
+  };
+
+  const deleteBill = async (id) => {
+    if (!window.confirm('Delete this bill?')) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', id));
+    showToast(isRickshaw ? '✓ بل حذف' : '✓ Deleted');
+  };
+
   const todayStr  = getLocalDateStr();
   const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   const weekStart = getLocalDateStr(sevenDaysAgo);
@@ -1802,17 +1820,49 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           {myAdvances.map(a => {
             const isPayment = a.type === 'payment';
             const isBill = a.type === 'bill_paid';
+            const isEditingThis = editingBillId === a.id;
             return (
-              <div key={a.id} className={`border-2 rounded-2xl p-3 flex justify-between items-center ${isPayment ? 'bg-blue-50 border-blue-200' : isBill ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-100'}`}>
-                <div>
-                  <div className={`font-black text-sm leading-loose ${isPayment ? 'text-blue-800' : isBill ? 'text-purple-800' : 'text-amber-800'}`} style={isRickshaw ? uf : {}}>
-                    {isPayment ? t('✅ Fare Payment', '✅ کرایہ ادائیگی') : isBill ? t('💸 Transport Bill (T)', '💸 ٹرانسپورٹ بل (T)') : t('💰 Advance', '💰 ایڈوانس')}
+              <div key={a.id} className={`border-2 rounded-2xl overflow-hidden ${isPayment ? 'bg-blue-50 border-blue-200' : isBill ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-100'}`}>
+                <div className="p-3 flex justify-between items-center">
+                  <div>
+                    <div className={`font-black text-sm leading-loose ${isPayment ? 'text-blue-800' : isBill ? 'text-purple-800' : 'text-amber-800'}`} style={isRickshaw ? uf : {}}>
+                      {isPayment ? t('✅ Fare Payment', '✅ کرایہ ادائیگی') : isBill ? t('💸 Transport Bill (T)', '💸 ٹرانسپورٹ بل (T)') : t('💰 Advance', '💰 ایڈوانس')}
+                    </div>
+                    <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : isBill ? 'text-purple-400' : 'text-amber-400'}`} dir="ltr">
+                      {fmtDatePk(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' && a.note !== 'T' ? ` · ${a.note}` : ''}
+                    </div>
                   </div>
-                  <div className={`text-[9px] font-bold ${isPayment ? 'text-blue-400' : isBill ? 'text-purple-400' : 'text-amber-400'}`} dir="ltr">
-                    {fmtDatePk(a.date)}{a.note && a.note !== 'Salary Payment' && a.note !== 'Payment' && a.note !== 'T' ? ` · ${a.note}` : ''}
+                  <div className="flex items-center gap-2">
+                    <div className={`font-black text-base ${isPayment ? 'text-blue-700' : isBill ? 'text-purple-700' : 'text-amber-700'}`} dir="ltr">Rs.{(a.amount||0).toLocaleString()}</div>
+                    {isBill && !isEditingThis && (
+                      <button onClick={() => { setEditingBillId(a.id); setEditBillAmt(String(a.amount||'')); setEditBillDate(a.date||getLocalDateStr()); }}
+                        className="text-purple-400 hover:text-purple-700 p-1">✏️</button>
+                    )}
+                    {isBill && (
+                      <button onClick={() => deleteBill(a.id)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={13}/></button>
+                    )}
                   </div>
                 </div>
-                <div className={`font-black text-base ${isPayment ? 'text-blue-700' : isBill ? 'text-purple-700' : 'text-amber-700'}`} dir="ltr">Rs.{(a.amount||0).toLocaleString()}</div>
+                {isEditingThis && (
+                  <div className="px-3 pb-3 pt-1 border-t border-purple-200 bg-purple-100/50 space-y-2" dir="ltr">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[8px] font-black text-purple-500 uppercase tracking-widest block mb-1">Amount (Rs.)</label>
+                        <input type="number" value={editBillAmt} onChange={e => setEditBillAmt(e.target.value)}
+                          className="w-full bg-white border-2 border-purple-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-purple-500 text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-black text-purple-500 uppercase tracking-widest block mb-1">Date</label>
+                        <input type="date" value={editBillDate} onChange={e => setEditBillDate(e.target.value)}
+                          className="w-full bg-white border-2 border-purple-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-purple-500 text-slate-900" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={saveBillEdit} className="flex-1 bg-purple-700 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">Save</button>
+                      <button onClick={() => setEditingBillId(null)} className="px-4 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">Cancel</button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -3237,6 +3287,9 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const [eDist, setEDist]       = useState(d.distanceKm?.toString() || '');
   const [eRate, setERate]       = useState(d.ratePerKm?.toString() || '');
 
+  const [eRickshawCount, setERickshawCount] = useState(d.rickshawCount || 1);
+  const [eFarePerUnit, setEFarePerUnit]     = useState(d.farePerUnit?.toString() || '');
+
   const canEdit = isAdmin || (ridesUser?.id === d.riderId && d.entryStatus === 'pending');
   const canDelete = isAdmin || (ridesUser?.id === d.riderId && d.entryStatus === 'pending');
 
@@ -3269,16 +3322,23 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
   const saveEdit = async () => {
     const dist = parseFloat(eDist) || 0;
     const rate = parseFloat(eRate) || 0;
+    const rickshawFields = d.riderType === 'rickshaw' ? {
+      rickshawCount: eRickshawCount,
+      tripCount: eRickshawCount,
+      farePerUnit: parseFloat(eFarePerUnit) || 0,
+      finalFare: parseFloat(eFarePerUnit) > 0 ? parseFloat(eFarePerUnit) * eRickshawCount : (parseFloat(eFare) || 0),
+    } : {};
     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id), {
       toArea: eArea.trim() || d.toArea,
       partyName: eParty.trim(),
       loadDescription: eLoad.trim(),
-      finalFare: parseFloat(eFare) || 0,
+      finalFare: d.riderType !== 'rickshaw' ? (parseFloat(eFare) || 0) : rickshawFields.finalFare,
       codAmount: parseFloat(eCOD) || 0,
       codCollected: eCODDone,
       status: eStatus,
       notes: eNotes.trim(),
       distanceKm: dist,
+      ...rickshawFields,
       ratePerKm: rate,
       suggestedFare: rate > 0 ? Math.round(dist * rate) : d.suggestedFare,
     });
@@ -3400,9 +3460,9 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
       {expanded && editing && (
         <div className="px-4 pb-4 border-t-2 border-blue-100 pt-3 space-y-3 bg-blue-50/30">
           <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Editing Trip</div>
-          {/* Area — dropdown for bike/bykea, text for rickshaw */}
+          {/* Area */}
           <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Area</label>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{d.riderType === 'rickshaw' ? 'علاقہ / Area' : 'Delivery Area'}</label>
             {d.riderType !== 'rickshaw' ? (
               <select value={eArea} onChange={e => {
                 const v = e.target.value;
@@ -3418,48 +3478,83 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
               <input value={eArea} onChange={e => setEArea(e.target.value)} placeholder="Area name" className={inp} />
             )}
           </div>
-          <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Party Name</label>
-            <input value={eParty} onChange={e=>setEParty(e.target.value)} className={inp} />
-          </div>
-          <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Load Description</label>
-            <input value={eLoad} onChange={e=>setELoad(e.target.value)} className={inp} />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
+          {/* Rickshaw-specific fields */}
+          {d.riderType === 'rickshaw' && (
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">رکشے</label>
+                <div className="flex gap-1">
+                  {[1,2,3,4].map(n => (
+                    <button key={n} onClick={() => setERickshawCount(n)}
+                      className={`flex-1 py-2.5 rounded-xl border-2 font-black text-sm transition-all ${eRickshawCount === n ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fare/Rickshaw</label>
+                <input type="number" value={eFarePerUnit} onChange={e => setEFarePerUnit(e.target.value)} placeholder="Rs." className={inp} />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Fare</label>
+                <div className="font-black text-blue-700 text-base py-2.5 px-3 bg-blue-50 border-2 border-blue-100 rounded-xl" dir="ltr">
+                  Rs.{((parseFloat(eFarePerUnit)||0) * eRickshawCount).toLocaleString() || eFare}
+                </div>
+              </div>
+            </div>
+          )}
+          {d.riderType === 'rickshaw' && (
             <div>
               <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Distance km</label>
               <input type="number" value={eDist} onChange={e=>setEDist(e.target.value)} className={inp} />
             </div>
+          )}
+          {/* Bike / Bykea fields */}
+          {d.riderType !== 'rickshaw' && (<>
             <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rate/km</label>
-              <input type="number" value={eRate} onChange={e=>setERate(e.target.value)} className={inp} />
-            </div>
-            <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Final Fare</label>
-              <input type="number" value={eFare} onChange={e=>setEFare(e.target.value)} className={`${inp} text-blue-700 font-black`} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Amount</label>
-              <input type="number" value={eCOD} onChange={e=>setECOD(e.target.value)} className={inp} />
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Party Name</label>
+              <input value={eParty} onChange={e=>setEParty(e.target.value)} className={inp} />
             </div>
             <div>
-              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Status</label>
-              <button onClick={()=>setECODDone(!eCODDone)} className={`w-full py-2.5 rounded-xl border-2 font-black text-[9px] uppercase transition-all ${eCODDone ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
-                {eCODDone ? '✓ Collected' : '⏳ Pending'}
-              </button>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Load Description</label>
+              <input value={eLoad} onChange={e=>setELoad(e.target.value)} className={inp} />
             </div>
-          </div>
-          <div>
-            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Status</label>
-            <div className="flex gap-1">
-              {DISPATCH_STATUSES.map(s => (
-                <button key={s} onClick={()=>setEStatus(s)} className={`flex-1 py-2 text-[8px] font-black rounded-lg border capitalize transition-all ${eStatus===s ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{s}</button>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Distance km</label>
+                <input type="number" value={eDist} onChange={e=>setEDist(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rate/km</label>
+                <input type="number" value={eRate} onChange={e=>setERate(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Final Fare</label>
+                <input type="number" value={eFare} onChange={e=>setEFare(e.target.value)} className={`${inp} text-blue-700 font-black`} />
+              </div>
             </div>
-          </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Amount</label>
+                <input type="number" value={eCOD} onChange={e=>setECOD(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">COD Status</label>
+                <button onClick={()=>setECODDone(!eCODDone)} className={`w-full py-2.5 rounded-xl border-2 font-black text-[9px] uppercase transition-all ${eCODDone ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                  {eCODDone ? '✓ Collected' : '⏳ Pending'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Delivery Status</label>
+              <div className="flex gap-1">
+                {DISPATCH_STATUSES.map(s => (
+                  <button key={s} onClick={()=>setEStatus(s)} className={`flex-1 py-2 text-[8px] font-black rounded-lg border capitalize transition-all ${eStatus===s ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{s}</button>
+                ))}
+              </div>
+            </div>
+          </>)}
           <div>
             <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Notes</label>
             <input value={eNotes} onChange={e=>setENotes(e.target.value)} className={inp} />
