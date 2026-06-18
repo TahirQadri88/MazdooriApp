@@ -2490,9 +2490,21 @@ function RiderPayCard({ s, showToast, lbl }) {
 
       <div className="p-4 space-y-3">
         {/* Stats row */}
-        <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="bg-slate-50 p-2 rounded-xl"><div className={lbl}>Fare Due</div><div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div></div>
-          <div className="bg-amber-50 p-2 rounded-xl"><div className={`${lbl} text-amber-600`}>Paid to Rider</div><div className="font-black text-amber-700">Rs.{s.totalAdv.toLocaleString()}</div></div>
+        <div className={`grid ${s.billsPaid > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-center`}>
+          <div className="bg-slate-50 p-2 rounded-xl">
+            <div className={lbl}>Fare Due</div>
+            <div className="font-black text-slate-700">Rs.{s.totalFare.toLocaleString()}</div>
+          </div>
+          {s.billsPaid > 0 && (
+            <div className="bg-purple-50 p-2 rounded-xl border border-purple-200">
+              <div className={`${lbl} text-purple-600`}>T Bills (+)</div>
+              <div className="font-black text-purple-700">Rs.{s.billsPaid.toLocaleString()}</div>
+            </div>
+          )}
+          <div className="bg-emerald-50 p-2 rounded-xl">
+            <div className={`${lbl} text-emerald-600`}>Paid Out</div>
+            <div className="font-black text-emerald-700">Rs.{s.totalAdv.toLocaleString()}</div>
+          </div>
         </div>
 
         {/* Net bar */}
@@ -2500,36 +2512,31 @@ function RiderPayCard({ s, showToast, lbl }) {
           {s.netPayable > 0 ? `Net Payable: Rs.${s.netPayable.toLocaleString()}` : s.netPayable < 0 ? `Rider owes back: Rs.${Math.abs(s.netPayable).toLocaleString()}` : 'All settled ✓'}
         </div>
 
-        {/* Pay Rider button — always visible */}
+        {/* Primary action — Pay */}
         <button onClick={() => { setShowPay(!showPay); setPayAmount(Math.max(0, s.netPayable).toString()); }}
           className="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-          <DollarSign size={14}/> Record Payment to {s.rider.name}
+          <DollarSign size={14}/> Record Payment
           {s.netPayable > 0 && <span className="bg-blue-600 px-2 py-0.5 rounded-lg">Rs.{s.netPayable.toLocaleString()}</span>}
         </button>
 
-        {/* Share detailed trip report */}
-        <button onClick={() => {
-          const text = buildRiderReport({
-            riderName: s.rider.name,
-            tripList: s.tripList || [],
-            advEntries: s.advEntries || [],
-            totalFare: s.totalFare,
-            totalAdv: s.totalAdv,
-            billsPaid: s.billsPaid || 0,
-            netPayable: s.netPayable,
-          });
-          if (navigator.share) navigator.share({ title: `Payment Report — ${s.rider.name}`, text });
-          else { navigator.clipboard.writeText(text); showToast('Report copied to clipboard'); }
-        }}
-          className="w-full bg-slate-600 hover:bg-slate-700 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-          <Share2 size={13}/> Share Trip Report
-        </button>
-
-        {/* Transport Bill (T) */}
-        <button onClick={() => setShowBill(v => !v)}
-          className="w-full bg-purple-700 hover:bg-purple-800 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
-          <span>💸</span> Record Transport Bill (T) — {s.rider.name}
-        </button>
+        {/* Secondary actions in a row */}
+        <div className="flex gap-2">
+          <button onClick={() => setShowBill(v => !v)}
+            className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-1">
+            💸 T Bill
+          </button>
+          <button onClick={() => {
+            const text = buildRiderReport({
+              riderName: s.rider.name, tripList: s.tripList || [],
+              advEntries: s.advEntries || [], totalFare: s.totalFare,
+              totalAdv: s.totalAdv, billsPaid: s.billsPaid || 0, netPayable: s.netPayable,
+            });
+            if (navigator.share) navigator.share({ title: `Payment Report — ${s.rider.name}`, text });
+            else { navigator.clipboard.writeText(text); showToast('Report copied'); }
+          }} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-1">
+            <Share2 size={12}/> Report
+          </button>
+        </div>
         {showBill && (
           <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-3 space-y-2">
             <div className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Transport Bill paid by {s.rider.name} on our behalf</div>
@@ -3236,15 +3243,23 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
 
 // Dispatch List / History
 function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter]       = useState('all');
+  const [riderFilter, setRiderFilter] = useState('all');
+  const [typeFilter, setTypeFilter]   = useState('all');
   const today = getLocalDateStr();
   const weekStart = getWeekRange().start;
   const isRickshaw = ridesUser?.type === 'rickshaw';
 
+  const riderNames = isAdmin
+    ? [...new Set(dispatches.map(d => d.riderName).filter(Boolean))].sort()
+    : [];
+
   const filtered = dispatches.filter(d => {
+    if (riderFilter !== 'all' && d.riderName !== riderFilter) return false;
+    if (typeFilter !== 'all' && d.riderType !== typeFilter) return false;
     if (filter === 'today') return d.date === today;
-    if (filter === 'week') return d.date >= weekStart;
-    if (filter === 'cod') return d.codAmount > 0 && !d.codCollected && d.entryStatus === 'finalized';
+    if (filter === 'week')  return d.date >= weekStart;
+    if (filter === 'cod')   return d.codAmount > 0 && !d.codCollected && d.entryStatus === 'finalized';
     return true;
   });
 
@@ -3254,6 +3269,7 @@ function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
 
   return (
     <div className="space-y-3 pb-10" dir={isRickshaw ? 'rtl' : undefined}>
+      {/* Date filter pills */}
       <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
         {filterLabels.map(([k,l]) => (
           <button key={k} onClick={() => setFilter(k)}
@@ -3261,6 +3277,28 @@ function DispatchList({ dispatches, riders, ridesUser, isAdmin, showToast }) {
             {l}
           </button>
         ))}
+      </div>
+      {/* Admin-only: rider + type filters */}
+      {isAdmin && (
+        <div className="flex gap-2">
+          <select value={riderFilter} onChange={e => setRiderFilter(e.target.value)}
+            className="flex-1 bg-white border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-blue-400">
+            <option value="all">All Riders</option>
+            {riderNames.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+            className="bg-white border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-blue-400">
+            <option value="all">All Types</option>
+            <option value="bike">🟢 Bike</option>
+            <option value="rickshaw">🟡 Rickshaw</option>
+            <option value="bykea">🔵 Bykea</option>
+          </select>
+        </div>
+      )}
+      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
+        {filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'}
+        {riderFilter !== 'all' && ` · ${riderFilter}`}
+        {typeFilter !== 'all' && ` · ${typeFilter}`}
       </div>
       {filtered.length === 0 && <div className="text-center py-10 text-slate-400 text-sm font-bold">No dispatches found</div>}
       {filtered.map(d => <DispatchCard key={d.id} dispatch={d} isAdmin={isAdmin} ridesUser={ridesUser} showToast={showToast} />)}
