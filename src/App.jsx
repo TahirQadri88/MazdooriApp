@@ -1525,8 +1525,9 @@ function RidesPinLogin({ riders, onLogin, showToast }) {
 }
 
 function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv, billsPaid, netPayable }) {
-  const sep = '─────────────────────────';
-  const LTR = '‎'; // left-to-right mark — stops WhatsApp flipping RTL lines
+  const sep  = '─────────────────────────';
+  const sep2 = '·  ·  ·  ·  ·  ·  ·  ·  ·';
+  const LTR  = '‎'; // U+200E — stops WhatsApp flipping RTL lines
   const sorted = [...tripList].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const JUNK_NOTES = ['Salary Payment', 'Payment', 'salary payment', 'payment'];
 
@@ -1534,38 +1535,79 @@ function buildRiderReport({ riderName, tripList, advEntries, totalFare, totalAdv
   const lastDate  = sorted.length ? fmtDatePk(sorted[sorted.length - 1].date) : '';
   const dateRange = firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
 
-  const tripLines = sorted.map((d, i) => {
-    const rawKm = d.distanceKm || AREA_DISTANCES[d.toArea] || AREA_DISTANCES_SHOP[d.toArea] || 0;
-    const totalKm = rawKm * (d.rickshawCount || 1);
-    const km = totalKm ? `${totalKm}km` : '—';
-    let line = `${LTR}${i + 1}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()} | ${fmtDatePk(d.date)}`;
-    if (d.codAmount > 0) line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
-    return line;
-  }).join('\n');
+  // Group trips by date and build day-by-day sections with subtotals
+  const byDate = sorted.reduce((acc, d) => {
+    const k = d.date || '';
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(d);
+    return acc;
+  }, {});
 
-  const advLines = advEntries.length > 0
-    ? [...advEntries].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(a => {
-        const label = a.type === 'payment' ? '✅ Fare Payment' : a.type === 'bill_paid' ? '💸 Transport Bill (T)' : '💰 Advance';
-        const note  = a.note && !JUNK_NOTES.includes(a.note) ? ` | ${a.note}` : '';
-        return `${LTR}${label} | Rs.${(a.amount || 0).toLocaleString()} | ${fmtDatePk(a.date)}${note}`;
-      }).join('\n')
-    : 'No entries';
+  let tripNo = 1;
+  const dayBlocks = Object.entries(byDate).map(([date, dayTrips]) => {
+    const dayTotal = dayTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+    const lines = dayTrips.map(d => {
+      const rawKm  = d.distanceKm || AREA_DISTANCES[d.toArea] || AREA_DISTANCES_SHOP[d.toArea] || 0;
+      const totalKm = rawKm * (d.rickshawCount || 1);
+      const km = totalKm ? `${totalKm}km` : '—';
+      let line = `${LTR}  ${tripNo++}. ${d.toArea} | ${km} | Rs.${(d.finalFare || 0).toLocaleString()}`;
+      if (d.rickshawCount > 1) line += ` (×${d.rickshawCount})`;
+      if (d.codAmount > 0)     line += ` | COD Rs.${d.codAmount.toLocaleString()} ${d.codCollected ? '✅' : '⏳'}`;
+      return line;
+    });
+    return [
+      `${LTR}📅 ${fmtDatePk(date)}  (${dayTrips.length} trip${dayTrips.length > 1 ? 's' : ''})`,
+      ...lines,
+      `${LTR}  Subtotal: Rs.${dayTotal.toLocaleString()}`,
+    ].join('\n');
+  });
+
+  // Ledger
+  const payments = advEntries.filter(a => a.type === 'payment');
+  const bills    = advEntries.filter(a => a.type === 'bill_paid');
+  const advances = advEntries.filter(a => a.type !== 'payment' && a.type !== 'bill_paid');
+
+  const fmtEntry = a => {
+    const note = a.note && !JUNK_NOTES.includes(a.note) && a.note !== 'T' ? ` (${a.note})` : '';
+    return `${LTR}  • Rs.${(a.amount || 0).toLocaleString()} — ${fmtDatePk(a.date)}${note}`;
+  };
+
+  const ledgerBlocks = [];
+  if (bills.length) {
+    ledgerBlocks.push(`${LTR}💸 Transport Bills (T):`, ...bills.map(fmtEntry),
+      `${LTR}  Total T Bills: Rs.${bills.reduce((s,a)=>s+(a.amount||0),0).toLocaleString()}`);
+  }
+  if (payments.length) {
+    ledgerBlocks.push(`${LTR}✅ Payments Received:`, ...payments.map(fmtEntry),
+      `${LTR}  Total Paid: Rs.${payments.reduce((s,a)=>s+(a.amount||0),0).toLocaleString()}`);
+  }
+  if (advances.length) {
+    ledgerBlocks.push(`${LTR}💰 Advances:`, ...advances.map(fmtEntry),
+      `${LTR}  Total Advances: Rs.${advances.reduce((s,a)=>s+(a.amount||0),0).toLocaleString()}`);
+  }
+
+  const subtotal = totalFare + (billsPaid || 0);
+  const summaryLines = [
+    `${LTR}Fare Earned      : Rs.${totalFare.toLocaleString()}`,
+    billsPaid > 0 ? `${LTR}T Bills (+)      : Rs.${billsPaid.toLocaleString()}` : null,
+    billsPaid > 0 ? `${LTR}Subtotal         : Rs.${subtotal.toLocaleString()}` : null,
+    `${LTR}Payments Out (−) : Rs.${totalAdv.toLocaleString()}`,
+    sep2,
+    `${LTR}*NET PAYABLE     : Rs.${Math.abs(netPayable).toLocaleString()}${netPayable < 0 ? ' (Overpaid)' : ''}*`,
+  ].filter(Boolean);
 
   const parts = [
     `📋 ${riderName.toUpperCase()} — Khyber Traders`,
-    `Period: ${dateRange} | Trips: ${tripList.length}`,
+    `${LTR}Period : ${dateRange}`,
+    `${LTR}Trips  : ${tripList.length}`,
     sep,
-    tripLines || 'No trips',
+    ...dayBlocks,
     sep,
-    [
-      `Fare: Rs.${totalFare.toLocaleString()}`,
-      billsPaid > 0 ? `T Bills (+): Rs.${billsPaid.toLocaleString()}` : null,
-      `Payments Received: Rs.${totalAdv.toLocaleString()}`,
-      `*NET PAYABLE: Rs.${netPayable.toLocaleString()}*`,
-    ].filter(Boolean).join(' | '),
+    `SUMMARY`,
+    ...summaryLines,
   ];
-  if (advEntries.length > 0) {
-    parts.push(sep, `Ledger:`, advLines);
+  if (ledgerBlocks.length) {
+    parts.push(sep, `LEDGER`, ...ledgerBlocks);
   }
   return parts.join('\n');
 }
@@ -3427,8 +3469,8 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
                 }
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[9px] font-black uppercase ${statusColor}`}>{isRickshawCard ? statusUrdu : d.entryStatus}</span>
-                {d.codAmount > 0 && <span className={`text-[9px] font-black uppercase ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
+                <span className={`text-xs font-black ${statusColor}`} style={isRickshawCard ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>{isRickshawCard ? statusUrdu : d.entryStatus}</span>
+                {d.codAmount > 0 && <span className={`text-xs font-black ${d.codCollected ? 'text-emerald-600' : 'text-red-500'}`}>COD {d.codCollected ? '✓' : '⏳'}</span>}
               </div>
             </div>
           </div>
