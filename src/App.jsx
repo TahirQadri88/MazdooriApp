@@ -1442,11 +1442,11 @@ function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances,
     <div className="space-y-4 animate-in fade-in duration-300">
       <div className={`flex justify-between items-center ${isRickshawUser ? 'flex-row-reverse' : ''}`}>
         <div className={isRickshawUser ? 'text-right' : ''}>
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{isRickshawUser ? 'لاگ ان' : 'Logged in as'}</span>
+          <span className="text-xs font-black text-slate-400" style={isRickshawUser ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>{isRickshawUser ? 'لاگ ان' : 'Logged in as'}</span>
           <div className="font-black text-blue-700 uppercase text-sm">{ridesUser.name}</div>
         </div>
-        <button onClick={() => setRidesUser(null)} className="flex items-center gap-1 text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest">
-          <LogOut size={12} /> {isRickshawUser ? 'خارج' : 'Logout'}
+        <button onClick={() => setRidesUser(null)} className="flex items-center gap-1 text-sm font-black text-red-500 hover:text-red-700 px-3 py-1.5 rounded-xl hover:bg-red-50 transition-all" style={isRickshawUser ? {fontFamily:"'Noto Nastaliq Urdu', serif"} : {}}>
+          <LogOut size={14} /> {isRickshawUser ? 'خارج' : 'Logout'}
         </button>
       </div>
       {isAdmin
