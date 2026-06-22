@@ -1683,9 +1683,9 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div className="text-white font-black text-base leading-loose" style={isRickshaw ? uf : {}}>{ridesUser.name}</div>
             <div className="text-blue-200 text-[9px] font-black uppercase tracking-widest" style={isRickshaw ? uf : {}}>{periodLabel}</div>
           </div>
-          {myFin.length > 0 && (
+          {periodTrips.length > 0 && (
             <button onClick={() => {
-              const text = buildRiderReport({ riderName: ridesUser.name, tripList: myFin, advEntries: myAdvances, totalFare: totalEarned, totalAdv: advance, billsPaid, netPayable: adminOwes });
+              const text = buildRiderReport({ riderName: ridesUser.name, tripList: periodTrips, advEntries: periodAdvances, totalFare: periodEarned, totalAdv: periodPayments, billsPaid: periodBills, netPayable: periodBalance });
               if (navigator.share) navigator.share({ title: `Pay Report — ${ridesUser.name}`, text });
               else { navigator.clipboard.writeText(text); }
             }} className="flex items-center gap-1 text-[9px] font-black text-blue-200 hover:text-white uppercase tracking-widest">
