@@ -1735,19 +1735,27 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             </button>
           )}
         </div>
-        {/* ── Period earnings strip ── */}
-        <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex justify-between items-center">
+        {/* ── Period earnings ── */}
+        <div className="bg-blue-600 px-5 py-4 flex justify-between items-center border-b-4 border-blue-800">
           <div>
-            <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{periodLabel}</div>
-            <div className="text-[11px] font-bold text-blue-400">{periodTrips.length} {t('trips', 'رائڈز')}{periodBills > 0 ? ` · T Rs.${periodBills.toLocaleString()}` : ''}</div>
+            <div className="text-blue-100 text-xs font-black uppercase tracking-widest mb-0.5" style={isRickshaw ? uf : {}}>
+              {periodLabel} — {t('Period Due', 'مدت کا کرایہ')}
+            </div>
+            <div className="text-white text-[11px] font-bold" dir="ltr">
+              {periodTrips.length} {t('trips', 'رائڈز')}
+              {periodBills > 0 && <> · T Rs.{periodBills.toLocaleString()}</>}
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Period Due', 'مدت کا کرایہ')}</div>
-            <div className="font-black text-blue-700 text-lg" dir="ltr">Rs.{(periodEarned + periodBills).toLocaleString()}</div>
+          <div className="font-black text-white text-2xl" dir="ltr">
+            Rs.{(periodEarned + periodBills).toLocaleString()}
           </div>
         </div>
 
-        <div className="px-5 py-4 space-y-0 divide-y divide-slate-100">
+        {/* ── All-time balance ── */}
+        <div className="px-4 py-1.5 bg-slate-100">
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('All-Time Running Balance', 'کل وقت کا حساب')}</span>
+        </div>
+        <div className="px-5 py-3 space-y-0 divide-y divide-slate-100">
           {/* Row 1 — Fare Due (all-time) */}
           <div className="flex justify-between items-center py-3">
             <div className="text-sm font-black text-slate-600" style={isRickshaw ? uf : {}}>{t('Fare Due', 'کرایہ واجب')}</div>
