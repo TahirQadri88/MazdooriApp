@@ -1746,7 +1746,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           </div>
           {periodTrips.length > 0 && (
             <button onClick={() => {
-              const text = buildRiderReport({ riderName: ridesUser.name, tripList: periodTrips, advEntries: periodAdvances, totalFare: periodEarned, totalAdv: periodPayments, billsPaid: periodBills, netPayable: periodBalance });
+              const text = buildRiderReport({ riderName: ridesUser.name, tripList: periodTrips, advEntries: periodAdvances, totalFare: periodEarned, totalAdv: periodPayments, billsPaid: periodBills, netPayable: netBalance });
               if (navigator.share) navigator.share({ title: `Pay Report — ${ridesUser.name}`, text });
               else { navigator.clipboard.writeText(text); }
             }} className="flex items-center gap-1 text-[9px] font-black text-blue-200 hover:text-white uppercase tracking-widest">
@@ -1852,7 +1852,7 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest" style={isRickshaw ? uf : {}}>
               {periodLabel} · {periodTrips.length} {t('rides', 'رائڈز')}
             </div>
-            <div className="text-[10px] font-black text-blue-700" dir="ltr">Rs.{periodTotal.toLocaleString()}</div>
+            <div className="text-[10px] font-black text-blue-700" dir="ltr">Rs.{periodEarned.toLocaleString()}</div>
           </div>
           {periodTrips.sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(d => (
             <div key={d.id} className="bg-white border-2 border-slate-100 rounded-2xl p-3 flex justify-between items-center">
