@@ -1436,7 +1436,7 @@ function RidesGate({ ridesUser, setRidesUser, riders, dispatches, riderAdvances,
   if (!ridesUser) {
     return <RidesPinLogin riders={riders} onLogin={setRidesUser} showToast={showToast} />;
   }
-  const isAdmin = ridesUser.roles.includes('admin');
+  const isAdmin = ridesUser.roles?.includes('admin');
   const isRickshawUser = ridesUser.type === 'rickshaw';
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
