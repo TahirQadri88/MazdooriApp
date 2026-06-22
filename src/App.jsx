@@ -1735,6 +1735,18 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
             </button>
           )}
         </div>
+        {/* ── Period earnings strip ── */}
+        <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex justify-between items-center">
+          <div>
+            <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{periodLabel}</div>
+            <div className="text-[11px] font-bold text-blue-400">{periodTrips.length} {t('trips', 'رائڈز')}{periodBills > 0 ? ` · T Rs.${periodBills.toLocaleString()}` : ''}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Period Due', 'مدت کا کرایہ')}</div>
+            <div className="font-black text-blue-700 text-lg" dir="ltr">Rs.{(periodEarned + periodBills).toLocaleString()}</div>
+          </div>
+        </div>
+
         <div className="px-5 py-4 space-y-0 divide-y divide-slate-100">
           {/* Row 1 — Fare Due (all-time) */}
           <div className="flex justify-between items-center py-3">
