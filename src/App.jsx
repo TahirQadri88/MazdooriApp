@@ -1682,13 +1682,32 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
   const periodEarned   = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
   const periodBills    = periodAdvances.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
   const periodPayments = periodAdvances.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
-  const periodBalance  = periodEarned + periodBills - periodPayments;
-  const periodTotal    = periodEarned;
-  const periodLabel    = period === 'today'  ? t('Today', 'آج')
-                       : period === 'week'   ? t('This Week', 'اس ہفتے')
-                       : period === 'month'  ? t('This Month', 'اس مہینے')
-                       : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
-                       : t('All Time', 'کل وقت');
+
+  // Opening balance = everything BEFORE this period
+  const preTrips    = period === 'all' ? [] : myFin.filter(d => !inPeriod(d));
+  const preAdv      = period === 'all' ? [] : myAdvances.filter(a => !inPeriod(a));
+  const preFare     = preTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+  const preBills    = preAdv.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const prePayments = preAdv.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+  const openingBalance = preFare + preBills - prePayments;
+
+  const subtotal   = openingBalance + periodEarned + periodBills;
+  const netBalance = subtotal - periodPayments; // always equals adminOwes
+  const periodLabel = period === 'today'  ? t('Today', 'آج')
+                    : period === 'week'   ? t('This Week', 'اس ہفتے')
+                    : period === 'month'  ? t('This Month', 'اس مہینے')
+                    : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
+                    : t('All Time', 'کل وقت');
+  const Rs = n => <span dir="ltr">Rs.{Math.abs(n).toLocaleString()}</span>;
+  const ledgerRow = (label, amount, color = 'text-slate-700', prefix = '') => (
+    <div className="flex justify-between items-center py-2.5">
+      <div className={`text-sm font-black ${color}`} style={isRickshaw ? uf : {}}>{label}</div>
+      <div className={`font-black text-base ${color}`}>{prefix}{Rs(amount)}</div>
+    </div>
+  );
+  const ledgerSep = (thick = false) => (
+    <div className={`${thick ? 'border-t-2 border-slate-400' : 'border-t border-slate-200'} my-1`} />
+  );
 
   return (
     <div className="space-y-4 pb-10">
@@ -1736,54 +1755,65 @@ function RiderPayDash({ dispatches, ridesUser, riderAdvances }) {
           )}
         </div>
         {/* ── Period earnings ── */}
-        <div className="bg-blue-600 px-5 py-4 flex justify-between items-center border-b-4 border-blue-800">
-          <div>
-            <div className="text-blue-100 text-xs font-black uppercase tracking-widest mb-0.5" style={isRickshaw ? uf : {}}>
-              {periodLabel} — {t('Period Due', 'مدت کا کرایہ')}
-            </div>
-            <div className="text-white text-[11px] font-bold" dir="ltr">
-              {periodTrips.length} {t('trips', 'رائڈز')}
-              {periodBills > 0 && <> · T Rs.{periodBills.toLocaleString()}</>}
-            </div>
+        {/* ── Ledger body ── */}
+        <div className="px-5 pt-3 pb-4">
+          {/* Period heading */}
+          <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2" style={isRickshaw ? uf : {}}>
+            {t('Statement —', 'حساب —')} {periodLabel}
           </div>
-          <div className="font-black text-white text-2xl" dir="ltr">
-            Rs.{(periodEarned + periodBills).toLocaleString()}
-          </div>
-        </div>
 
-        {/* ── All-time balance ── */}
-        <div className="px-4 py-1.5 bg-slate-100">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('All-Time Running Balance', 'کل وقت کا حساب')}</span>
-        </div>
-        <div className="px-5 py-3 space-y-0 divide-y divide-slate-100">
-          {/* Row 1 — Fare Due (all-time) */}
-          <div className="flex justify-between items-center py-3">
-            <div className="text-sm font-black text-slate-600" style={isRickshaw ? uf : {}}>{t('Fare Due', 'کرایہ واجب')}</div>
-            <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{totalEarned.toLocaleString()}</div>
-          </div>
-          {/* Row 1b — Bills Paid (all-time, only if any) + Subtotal */}
-          {billsPaid > 0 && (<>
-            <div className="flex justify-between items-center py-3">
-              <div className="text-sm font-black text-blue-600" style={isRickshaw ? uf : {}}>{t('Bills Paid by You (+)', 'ٹرانسپورٹ بل (+)')}</div>
-              <div className="font-black text-blue-600 text-base" dir="ltr">Rs.{billsPaid.toLocaleString()}</div>
-            </div>
-            <div className="flex justify-between items-center py-2 bg-slate-50 -mx-5 px-5">
-              <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest" style={isRickshaw ? uf : {}}>{t('Subtotal', 'کل واجب')}</div>
-              <div className="font-black text-slate-700 text-base" dir="ltr">Rs.{(totalEarned + billsPaid).toLocaleString()}</div>
-            </div>
+          {/* Opening balance (only when period is not All) */}
+          {period !== 'all' && (
+            <>
+              {ledgerRow(
+                t('Opening Balance (b/f)', 'ابتدائی بقایا'),
+                openingBalance,
+                openingBalance > 0 ? 'text-slate-700' : openingBalance < 0 ? 'text-emerald-600' : 'text-slate-400'
+              )}
+              {ledgerSep()}
+            </>
+          )}
+
+          {/* Period rides */}
+          {ledgerRow(
+            `${t('Rides', 'رائڈز')} (${periodTrips.length}) +`,
+            periodEarned,
+            'text-slate-700'
+          )}
+
+          {/* Period T bills */}
+          {periodBills > 0 && ledgerRow(
+            t('Transport Bills (T) +', 'ٹرانسپورٹ بل (+)'),
+            periodBills,
+            'text-blue-600'
+          )}
+
+          {/* Subtotal */}
+          {ledgerSep()}
+          {ledgerRow(
+            t('Subtotal', 'کل واجب'),
+            subtotal,
+            'text-slate-600'
+          )}
+
+          {/* Payments deducted */}
+          {periodPayments > 0 && (<>
+            {ledgerRow(
+              t('Payments Received (−)', 'وصول ہوا (−)'),
+              periodPayments,
+              'text-emerald-600',
+              '− '
+            )}
           </>)}
-          {/* Row 2 — Payments Received (all-time) */}
+
+          {/* Net balance */}
+          {ledgerSep(true)}
           <div className="flex justify-between items-center py-3">
-            <div className="text-sm font-black text-emerald-700" style={isRickshaw ? uf : {}}>{t('Payments Received', 'وصول ہوا (ادائیگی)')}</div>
-            <div className="font-black text-emerald-700 text-base" dir="ltr">Rs.{advance.toLocaleString()}</div>
-          </div>
-          {/* Row 3 — Balance (all-time) */}
-          <div className={`flex justify-between items-center py-3 ${adminOwes === 0 ? '' : 'pt-4'}`}>
-            <div className={`text-sm font-black ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-600'}`} style={isRickshaw ? uf : {}}>
-              {adminOwes > 0 ? t('Admin Owes You', 'ادارے کا واجب') : adminOwes < 0 ? t('You Owe', 'آپ کے ذمے') : t('Settled ✓', 'حساب صاف ✓')}
+            <div className={`font-black text-base ${netBalance > 0 ? 'text-blue-700' : netBalance < 0 ? 'text-amber-600' : 'text-emerald-600'}`} style={isRickshaw ? uf : {}}>
+              {netBalance > 0 ? t('NET BALANCE DUE', 'خالص واجب الادا') : netBalance < 0 ? t('OVERPAID', 'زائد ادا') : t('✓ SETTLED', '✓ حساب صاف')}
             </div>
-            <div className={`font-black text-xl ${adminOwes > 0 ? 'text-blue-700' : adminOwes < 0 ? 'text-amber-700' : 'text-emerald-600'}`} dir="ltr">
-              {adminOwes === 0 ? '—' : `Rs.${Math.abs(adminOwes).toLocaleString()}`}
+            <div className={`font-black text-2xl ${netBalance > 0 ? 'text-blue-700' : netBalance < 0 ? 'text-amber-600' : 'text-emerald-600'}`} dir="ltr">
+              {netBalance === 0 ? '—' : `Rs.${Math.abs(netBalance).toLocaleString()}`}
             </div>
           </div>
         </div>
