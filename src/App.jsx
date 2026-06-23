@@ -2731,20 +2731,30 @@ function RiderPayCard({ s, showToast, lbl }) {
 }
 
 function ScrollTabs({ tabs, active, onChange }) {
+  const ref      = React.useRef(null);
   const activeRef = React.useRef(null);
+  const scroll   = (dir) => ref.current?.scrollBy({ left: dir * 120, behavior: 'smooth' });
   React.useEffect(() => {
     activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [active]);
   return (
-    <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
-      <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex gap-1 shadow-sm min-w-max">
-        {tabs.map(([k, l]) => (
-          <button key={k} ref={active === k ? activeRef : null} onClick={() => onChange(k)}
-            className={`py-2.5 px-4 text-xs font-black rounded-xl uppercase tracking-wide whitespace-nowrap transition-all ${active === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
-            {l}
-          </button>
-        ))}
+    <div className="flex items-center gap-1">
+      <button onClick={() => scroll(-1)} className="shrink-0 w-7 h-7 flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+        <ChevronDown size={14} className="rotate-90" />
+      </button>
+      <div ref={ref} className="overflow-x-auto hide-scrollbar flex-1">
+        <div className="bg-white p-1 rounded-2xl border-2 border-slate-100 flex gap-1 shadow-sm min-w-max">
+          {tabs.map(([k, l]) => (
+            <button key={k} ref={active === k ? activeRef : null} onClick={() => onChange(k)}
+              className={`py-2 px-3 text-[9px] font-black rounded-xl uppercase tracking-widest whitespace-nowrap transition-all ${active === k ? 'bg-blue-700 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
+      <button onClick={() => scroll(1)} className="shrink-0 w-7 h-7 flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+        <ChevronDown size={14} className="-rotate-90" />
+      </button>
     </div>
   );
 }
