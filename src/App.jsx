@@ -3220,7 +3220,7 @@ function DispatchForm({ riderType, ridesUser, dispatchSettings, riders = [], ric
             <label className={labelCls}>Rider</label>
             <select value={riderId} onChange={e => setRiderId(e.target.value)} className={inputCls}>
               <option value="">— Select Rider —</option>
-              {riders.filter(r => !r.roles.includes('admin')).map(r => (
+              {riders.filter(r => !r.roles?.includes('admin')).map(r => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
