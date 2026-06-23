@@ -2881,9 +2881,12 @@ function AdminLedger({ dispatches, riders, riderAdvances, showToast }) {
     return { rider: r, periodTrips, periodAdv, openingBalance, periodFare, periodBills, periodPayments, subtotal, netBalance, myFin, myAdv };
   }).filter(r => r.myFin.length > 0 || r.myAdv.length > 0);
 
-  const grandFare    = riderData.reduce((s, r) => s + r.periodFare, 0);
-  const grandBalance = riderData.reduce((s, r) => s + r.netBalance, 0);
-  const totalTrips   = riderData.reduce((s, r) => s + r.periodTrips.length, 0);
+  const grandFare     = riderData.reduce((s, r) => s + r.periodFare, 0);
+  const grandBills    = riderData.reduce((s, r) => s + r.periodBills, 0);
+  const grandPayments = riderData.reduce((s, r) => s + r.periodPayments, 0);
+  const grandBalance  = riderData.reduce((s, r) => s + r.netBalance, 0);
+  const totalTrips    = riderData.reduce((s, r) => s + r.periodTrips.length, 0);
+  const totalRickshaws = riderData.reduce((s, r) => s + r.periodTrips.reduce((ss, d) => ss + (d.rickshawCount || 1), 0), 0);
 
   const periodLabel = period === 'today'  ? 'Today'
                     : period === 'week'   ? 'This Week'
@@ -2918,11 +2921,11 @@ function AdminLedger({ dispatches, riders, riderAdvances, showToast }) {
       )}
 
       {/* Summary banner */}
-      <div className="bg-blue-700 rounded-2xl p-4">
-        <div className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-2">{periodLabel} · {riderData.length} riders · {totalTrips} trips</div>
+      <div className="bg-blue-700 rounded-2xl p-4 space-y-3">
+        <div className="text-[9px] font-black text-blue-200 uppercase tracking-widest">{periodLabel} · {riderData.length} riders · {totalTrips} trips{totalRickshaws !== totalTrips ? ` · ${totalRickshaws} rickshaws` : ''}</div>
         <div className="flex justify-between items-end">
           <div>
-            <div className="text-[8px] font-black text-blue-300 uppercase">Total Earned</div>
+            <div className="text-[8px] font-black text-blue-300 uppercase">Fare Earned</div>
             <div className="font-black text-white text-2xl" dir="ltr">Rs.{grandFare.toLocaleString()}</div>
           </div>
           <div className="text-right">
@@ -2932,6 +2935,22 @@ function AdminLedger({ dispatches, riders, riderAdvances, showToast }) {
             </div>
           </div>
         </div>
+        {(grandBills > 0 || grandPayments > 0) && (
+          <div className="border-t border-blue-600 pt-2 flex gap-4">
+            {grandBills > 0 && (
+              <div>
+                <div className="text-[8px] font-black text-purple-300 uppercase">Transport Bills</div>
+                <div className="font-black text-purple-200 text-sm" dir="ltr">+ Rs.{grandBills.toLocaleString()}</div>
+              </div>
+            )}
+            {grandPayments > 0 && (
+              <div>
+                <div className="text-[8px] font-black text-emerald-300 uppercase">Payments Made</div>
+                <div className="font-black text-emerald-200 text-sm" dir="ltr">− Rs.{grandPayments.toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {riderData.length === 0 && (
@@ -3019,7 +3038,9 @@ function RiderLedgerCard({ r, period, showToast, expanded, onToggle }) {
               <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isRickshaw ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                 {isRickshaw ? '🟡 Rickshaw' : '🟢 Bike'}
               </span>
-              <span className="text-[8px] font-bold text-slate-400">{r.periodTrips.length} trip{r.periodTrips.length !== 1 ? 's' : ''}</span>
+              <span className="text-[8px] font-bold text-slate-400">{r.periodTrips.length} trip{r.periodTrips.length !== 1 ? 's' : ''}
+                {isRickshaw && (() => { const rc = r.periodTrips.reduce((s,d)=>s+(d.rickshawCount||1),0); return rc !== r.periodTrips.length ? ` · ${rc} rickshaws` : ''; })()}
+              </span>
             </div>
           </div>
           <div className="text-right">
@@ -3094,7 +3115,11 @@ function RiderLedgerCard({ r, period, showToast, expanded, onToggle }) {
                   <div key={d.id} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
                     <div className="min-w-0">
                       <div className="text-xs font-black text-slate-700 truncate">{URDU_AREA_NAMES?.[d.toArea] || d.toArea}</div>
-                      <div className="text-[8px] font-bold text-slate-400" dir="ltr">{fmtDatePk(d.date)}{d.tripCount > 1 ? ` · ×${d.tripCount}` : ''}</div>
+                      <div className="text-[8px] font-bold text-slate-400" dir="ltr">
+                        {fmtDatePk(d.date)}
+                        {(d.rickshawCount > 1) ? ` · ×${d.rickshawCount} rickshaws @ Rs.${(d.farePerUnit||0).toLocaleString()}` : ''}
+                        {d.tripCount > 1 ? ` · ×${d.tripCount}` : ''}
+                      </div>
                     </div>
                     <div className="font-black text-xs text-blue-700 shrink-0 ml-2" dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
                   </div>
