@@ -2765,6 +2765,7 @@ function AdminRidesView({ dispatches, riders, riderAdvances, rickshawAreaRates, 
   const TABS = [
     ['approve', pending.length ? `Approve · ${pending.length}` : 'Approve'],
     ['ledger',  'Ledger'],
+    ['reports', 'Reports'],
     ['log',     'Log'],
     ['new',     '+ New'],
     ['riders',  'Riders'],
@@ -2775,6 +2776,7 @@ function AdminRidesView({ dispatches, riders, riderAdvances, rickshawAreaRates, 
       <ScrollTabs tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'approve'  && <AdminApproval dispatches={dispatches} showToast={showToast} ridesUser={ridesUser} />}
       {tab === 'ledger'   && <AdminLedger dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
+      {tab === 'reports'  && <RidesReports dispatches={dispatches} riders={riders} rickshawAreaRates={rickshawAreaRates} showToast={showToast} />}
       {tab === 'log'      && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
       {tab === 'new'      && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('approve')} isAdmin />}
       {tab === 'riders'   && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
@@ -4111,7 +4113,7 @@ function DispatchCard({ dispatch: d, isAdmin, ridesUser, showToast }) {
 }
 
 // Reports (7 types)
-function RidesReports({ dispatches, riders, showToast }) {
+function RidesReports({ dispatches, riders, rickshawAreaRates = [], showToast }) {
   const [tab, setTab] = useState('summary');
   const [range, setRange] = useState(getWeekRange());
   const presets = getDatePresets();
@@ -4159,7 +4161,7 @@ function RidesReports({ dispatches, riders, showToast }) {
       {tab === 'bykea'    && <ReportBykea fin={fin} range={range} showToast={showToast} />}
       {tab === 'area'     && <ReportArea fin={fin} range={range} showToast={showToast} />}
       {tab === 'cod'      && <ReportCOD fin={fin} riders={riders} range={range} showToast={showToast} />}
-      {tab === 'cost'     && <ReportCost fin={fin} range={range} showToast={showToast} />}
+      {tab === 'cost'     && <ReportCost fin={fin} riders={riders} rickshawAreaRates={rickshawAreaRates} range={range} showToast={showToast} />}
     </div>
   );
 }
@@ -4402,32 +4404,157 @@ function ReportCOD({ fin, riders, range, showToast }) {
   );
 }
 
-function ReportCost({ fin, range, showToast }) {
-  const groups = { bike: fin.filter(d=>d.riderType==='bike'), rickshaw: fin.filter(d=>d.riderType==='rickshaw'), bykea: fin.filter(d=>d.riderType==='bykea') };
-  const cpk = (arr) => {
-    const totalKm = arr.reduce((s,d)=>s+(d.distanceKm||0)*(d.rickshawCount||1),0);
-    const totalFare = arr.reduce((s,d)=>s+(d.finalFare||0),0);
-    return totalKm > 0 ? (totalFare/totalKm).toFixed(1) : '—';
+function ReportCost({ fin, riders, rickshawAreaRates = [], range, showToast }) {
+  const [expanded, setExpanded] = useState({});
+  const toggle = id => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+  const bikes     = fin.filter(d => d.riderType === 'bike');
+  const rickshaws = fin.filter(d => d.riderType === 'rickshaw');
+  const bykeas    = fin.filter(d => d.riderType === 'bykea');
+
+  const sumKm   = arr => arr.reduce((s,d) => s + (d.distanceKm||0)*(d.rickshawCount||1), 0);
+  const sumFare = arr => arr.reduce((s,d) => s + (d.finalFare||0), 0);
+  const cpk     = arr => { const km = sumKm(arr); return km > 0 ? (sumFare(arr)/km).toFixed(1) : '—'; };
+
+  const riderIds = [...new Set(fin.map(d => d.riderId))];
+  const riderType = rid => riders.find(r => r.id === rid)?.type || fin.find(d => d.riderId === rid)?.riderType || 'bike';
+  const riderName = rid => { const r = riders.find(x => x.id === rid); return r?.name || fin.find(d => d.riderId === rid)?.riderName || rid; };
+  const bikeRiders     = riderIds.filter(rid => riderType(rid) === 'bike');
+  const rickshawRiders = riderIds.filter(rid => riderType(rid) === 'rickshaw');
+
+  const getText = () => {
+    let t = `🏢 *KHYBER TRADERS — Cost Analysis*\n📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}\n\n`;
+    t += `*Summary*\n`;
+    t += `🟢 Bike: Rs.${cpk(bikes)}/km (${bikes.length} trips · ${sumKm(bikes).toFixed(1)}km)\n`;
+    t += `🟡 Rickshaw: Rs.${cpk(rickshaws)}/km (${rickshaws.length} trips · ${sumKm(rickshaws).toFixed(1)}km)\n`;
+    t += `🔵 Bykea/App: Rs.${cpk(bykeas)}/km (${bykeas.length} trips)\n\n`;
+
+    if (bikeRiders.length) {
+      t += `*🟢 Bike Riders*\n`;
+      bikeRiders.forEach(rid => {
+        const rDisps = fin.filter(d => d.riderId === rid);
+        const km = sumKm(rDisps); const fare = sumFare(rDisps);
+        t += `• ${riderName(rid)}: ${rDisps.length} trips | ${km.toFixed(1)}km | Rs.${fare.toLocaleString()} | Rs.${cpk(rDisps)}/km\n`;
+        const areaMap = {};
+        rDisps.forEach(d => { const a = d.toArea||'Unknown'; if(!areaMap[a]) areaMap[a]={c:0,f:0}; areaMap[a].c++; areaMap[a].f+=d.finalFare||0; });
+        Object.entries(areaMap).sort((a,b)=>b[1].f-a[1].f).forEach(([area,v]) => { t += `  – ${area}: ${v.c} trip${v.c>1?'s':''} Rs.${v.f.toLocaleString()}\n`; });
+      });
+      t += '\n';
+    }
+    if (rickshawRiders.length) {
+      t += `*🟡 Rickshaw Riders*\n`;
+      rickshawRiders.forEach(rid => {
+        const rDisps = fin.filter(d => d.riderId === rid);
+        const km = sumKm(rDisps); const fare = sumFare(rDisps);
+        t += `• ${riderName(rid)}: ${rDisps.length} trips | ${km.toFixed(1)}km | Rs.${fare.toLocaleString()} | Rs.${cpk(rDisps)}/km\n`;
+        const catMap = {};
+        rDisps.forEach(d => {
+          const cat = rickshawAreaRates.find(r => r.area === d.toArea)?.notes || 'دیگر';
+          if (!catMap[cat]) catMap[cat] = { c: 0, f: 0 };
+          catMap[cat].c++; catMap[cat].f += d.finalFare || 0;
+        });
+        Object.entries(catMap).sort((a,b)=>b[1].f-a[1].f).forEach(([cat,v]) => { t += `  – ${cat}: ${v.c} trip${v.c>1?'s':''} Rs.${v.f.toLocaleString()}\n`; });
+      });
+    }
+    t += `\n_Mazdoori Calculator App — Khyber Traders_`;
+    return t;
   };
-
-  const getText = () =>
-`🏢 *KHYBER TRADERS — Cost Analysis*
-📅 ${fmtDate(range.start)} to ${fmtDate(range.end)}
-
-💰 *Cost per km*
-🟢 Bike: Rs.${cpk(groups.bike)}/km (${groups.bike.length} trips)
-🟡 Rickshaw: Rs.${cpk(groups.rickshaw)}/km (${groups.rickshaw.length} trips)
-🔵 Bykea/App: Rs.${cpk(groups.bykea)}/km (${groups.bykea.length} trips)
-
-_Mazdoori Calculator App — Khyber Traders_`;
 
   return (
     <div className="space-y-3">
-      <ReportCard title="Cost Analysis — Rs. per km">
-        <StatRow label="Bike" value={`Rs.${cpk(groups.bike)}/km`} sub={`${groups.bike.length} trips`} />
-        <StatRow label="Rickshaw" value={`Rs.${cpk(groups.rickshaw)}/km`} sub={`${groups.rickshaw.length} trips`} />
-        <StatRow label="Bykea / App" value={`Rs.${cpk(groups.bykea)}/km`} sub={`${groups.bykea.length} trips`} />
+      {/* Aggregate summary */}
+      <ReportCard title="Cost Summary — Rs. per km">
+        <StatRow label="Bike" value={`Rs.${cpk(bikes)}/km`} sub={`${bikes.length} trips · ${sumKm(bikes).toFixed(1)} km`} />
+        <StatRow label="Rickshaw" value={`Rs.${cpk(rickshaws)}/km`} sub={`${rickshaws.length} trips · ${sumKm(rickshaws).toFixed(1)} km`} />
+        <StatRow label="Bykea / App" value={`Rs.${cpk(bykeas)}/km`} sub={`${bykeas.length} trips`} />
       </ReportCard>
+
+      {/* Bike riders */}
+      {bikeRiders.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">🟢 Bike Riders</div>
+          {bikeRiders.map(rid => {
+            const rDisps = fin.filter(d => d.riderId === rid);
+            const km = sumKm(rDisps); const fare = sumFare(rDisps);
+            const areaMap = {};
+            rDisps.forEach(d => { const a = d.toArea||'Unknown'; if(!areaMap[a]) areaMap[a]={c:0,f:0}; areaMap[a].c++; areaMap[a].f+=d.finalFare||0; });
+            const areaList = Object.entries(areaMap).sort((a,b)=>b[1].f-a[1].f);
+            return (
+              <div key={rid} className="bg-white rounded-3xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                <button onClick={() => toggle(rid)} className="w-full p-4 flex items-center justify-between text-left active:bg-slate-50 transition-colors">
+                  <div>
+                    <div className="font-black text-slate-900 text-sm">{riderName(rid)}</div>
+                    <div className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{rDisps.length} trips · {km.toFixed(1)} km · tap to {expanded[rid]?'collapse':'expand'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-slate-900 text-sm">Rs.{fare.toLocaleString()}</div>
+                    <div className="text-[10px] font-black text-blue-700">Rs.{cpk(rDisps)}/km</div>
+                  </div>
+                </button>
+                {expanded[rid] && areaList.length > 0 && (
+                  <div className="border-t-2 border-slate-50 px-4 py-2">
+                    {areaList.map(([area, v]) => (
+                      <div key={area} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+                        <div>
+                          <div className="text-[10px] font-black text-slate-700">{area}</div>
+                          <div className="text-[9px] text-slate-400 font-bold">{v.c} trip{v.c>1?'s':''}</div>
+                        </div>
+                        <span className="font-black text-blue-700 text-sm">Rs.{v.f.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rickshaw riders */}
+      {rickshawRiders.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">🟡 Rickshaw Riders</div>
+          {rickshawRiders.map(rid => {
+            const rDisps = fin.filter(d => d.riderId === rid);
+            const km = sumKm(rDisps); const fare = sumFare(rDisps);
+            const catMap = {};
+            rDisps.forEach(d => {
+              const cat = rickshawAreaRates.find(r => r.area === d.toArea)?.notes || 'دیگر';
+              if (!catMap[cat]) catMap[cat] = { c: 0, f: 0 };
+              catMap[cat].c++; catMap[cat].f += d.finalFare || 0;
+            });
+            const catList = Object.entries(catMap).sort((a,b) => b[1].f - a[1].f);
+            return (
+              <div key={rid} className="bg-white rounded-3xl border-2 border-amber-100 shadow-sm overflow-hidden">
+                <button onClick={() => toggle(rid)} className="w-full p-4 flex items-center justify-between text-left active:bg-amber-50 transition-colors">
+                  <div>
+                    <div className="font-black text-slate-900 text-sm">{riderName(rid)}</div>
+                    <div className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{rDisps.length} trips · {km.toFixed(1)} km · tap to {expanded[rid]?'collapse':'expand'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-slate-900 text-sm">Rs.{fare.toLocaleString()}</div>
+                    <div className="text-[10px] font-black text-amber-700">Rs.{cpk(rDisps)}/km</div>
+                  </div>
+                </button>
+                {expanded[rid] && catList.length > 0 && (
+                  <div className="border-t-2 border-amber-50 px-4 py-2">
+                    {catList.map(([cat, v]) => (
+                      <div key={cat} className="flex justify-between items-center py-1.5 border-b border-amber-50 last:border-0">
+                        <div>
+                          <div className="text-[10px] font-black text-amber-800">{cat}</div>
+                          <div className="text-[9px] text-slate-400 font-bold">{v.c} trip{v.c>1?'s':''}</div>
+                        </div>
+                        <span className="font-black text-amber-700 text-sm">Rs.{v.f.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <ShareBtn getText={getText} showToast={showToast} />
     </div>
   );
