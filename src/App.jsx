@@ -2756,24 +2756,431 @@ function ScrollTabs({ tabs, active, onChange }) {
 }
 
 function AdminRidesView({ dispatches, riders, riderAdvances, rickshawAreaRates, dispatchSettings, showToast, ridesUser }) {
-  const [tab, setTab] = useState('dashboard');
-  const TABS = [['dashboard','Dashboard'],['new','New Entry'],['log','Dispatch Log'],['payables','Payables'],['reports','Reports'],['riders','Riders'],['settings','Settings']];
-
+  const [tab, setTab] = useState('approve');
+  const pending = dispatches.filter(d => d.entryStatus === 'pending');
+  const TABS = [
+    ['approve', `Approve${pending.length ? ` (${pending.length})` : ''}`],
+    ['ledger',  'Ledger'],
+    ['log',     'Log'],
+    ['new',     '+ New'],
+    ['riders',  'Riders'],
+    ['settings','Settings'],
+  ];
   return (
     <div className="space-y-4">
       <ScrollTabs tabs={TABS} active={tab} onChange={setTab} />
-      {tab === 'dashboard' && <AdminDashboard dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
-      {tab === 'new' && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('log')} isAdmin />}
-      {tab === 'log' && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
-      {tab === 'payables' && <RiderPayables dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
-      {tab === 'reports' && <RidesReports dispatches={dispatches} riders={riders} showToast={showToast} />}
-      {tab === 'riders' && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
+      {tab === 'approve'  && <AdminApproval dispatches={dispatches} showToast={showToast} ridesUser={ridesUser} />}
+      {tab === 'ledger'   && <AdminLedger dispatches={dispatches} riders={riders} riderAdvances={riderAdvances} showToast={showToast} />}
+      {tab === 'log'      && <DispatchList dispatches={[...dispatches].sort((a,b) => b.createdAt - a.createdAt)} riders={riders} ridesUser={ridesUser} isAdmin showToast={showToast} />}
+      {tab === 'new'      && <DispatchForm riderType="all" ridesUser={ridesUser} dispatchSettings={dispatchSettings} riders={riders} rickshawAreaRates={rickshawAreaRates} showToast={showToast} onDone={() => setTab('approve')} isAdmin />}
+      {tab === 'riders'   && <RiderProfilesManager riders={riders} dispatches={dispatches} showToast={showToast} />}
       {tab === 'settings' && <RidesSettings dispatchSettings={dispatchSettings} rickshawAreaRates={rickshawAreaRates} showToast={showToast} />}
     </div>
   );
 }
 
-// Admin Dashboard
+// ── Admin: Approval Queue ──────────────────────────────────────────────────
+function AdminApproval({ dispatches, showToast, ridesUser }) {
+  const pending = [...dispatches.filter(d => d.entryStatus === 'pending')]
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const approveAll = async () => {
+    if (!pending.length) return;
+    if (!window.confirm(`Approve all ${pending.length} pending entries?`)) return;
+    const chunks = [];
+    for (let i = 0; i < pending.length; i += 400) chunks.push(pending.slice(i, i + 400));
+    for (const chunk of chunks) {
+      const batch = writeBatch(db);
+      chunk.forEach(d => batch.update(
+        doc(db, 'artifacts', appId, 'public', 'data', 'dispatches', d.id),
+        { entryStatus: 'finalized', finalizedAt: Date.now() }
+      ));
+      await batch.commit();
+    }
+    showToast(`✓ ${pending.length} entries approved`);
+  };
+
+  if (pending.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-3">
+        <CheckCircle className="mx-auto text-emerald-400" size={48} />
+        <div className="font-black text-slate-500 text-sm uppercase tracking-widest">All Clear</div>
+        <div className="text-[10px] text-slate-400 font-bold">No pending approvals</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pb-10">
+      <div className="flex items-center justify-between px-1">
+        <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
+          {pending.length} awaiting approval
+        </div>
+        <button onClick={approveAll}
+          className="bg-emerald-600 text-white font-black py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1.5">
+          <CheckCircle size={12}/> Approve All
+        </button>
+      </div>
+      {pending.map(d => (
+        <DispatchCard key={d.id} dispatch={d} isAdmin showToast={showToast} ridesUser={ridesUser} />
+      ))}
+    </div>
+  );
+}
+
+// ── Admin: Ledger view — per-rider running balance ─────────────────────────
+function AdminLedger({ dispatches, riders, riderAdvances, showToast }) {
+  const [period, setPeriod]           = useState('week');
+  const [customStart, setCustomStart] = useState(getLocalDateStr());
+  const [customEnd, setCustomEnd]     = useState(getLocalDateStr());
+  const [expandedId, setExpandedId]   = useState(null);
+
+  const today      = getLocalDateStr();
+  const sevenAgo   = new Date(); sevenAgo.setDate(sevenAgo.getDate() - 6);
+  const weekStart  = getLocalDateStr(sevenAgo);
+  const monthStart = today.slice(0, 7) + '-01';
+
+  const inPeriod = d => {
+    if (period === 'today')  return d.date === today;
+    if (period === 'week')   return d.date >= weekStart && d.date <= today;
+    if (period === 'month')  return d.date >= monthStart;
+    if (period === 'custom') return d.date >= customStart && d.date <= customEnd;
+    return true;
+  };
+
+  const allFin    = dispatches.filter(d => d.entryStatus === 'finalized');
+  const nonAdmins = riders.filter(r => !r.roles?.includes('admin'));
+
+  const riderData = nonAdmins.map(r => {
+    const myFin = allFin.filter(d => d.riderId === r.id);
+    const myAdv = (riderAdvances || []).filter(a => a.riderId === r.id);
+
+    const periodTrips = myFin.filter(inPeriod);
+    const periodAdv   = myAdv.filter(inPeriod);
+
+    const preTrips = period === 'all' ? [] : myFin.filter(d => !inPeriod(d));
+    const preAdv   = period === 'all' ? [] : myAdv.filter(a => !inPeriod(a));
+
+    const preFare     = preTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+    const preBills    = preAdv.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const prePayments = preAdv.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const openingBalance = preFare + preBills - prePayments;
+
+    const periodFare     = periodTrips.reduce((s, d) => s + (d.finalFare || 0), 0);
+    const periodBills    = periodAdv.filter(a => a.type === 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const periodPayments = periodAdv.filter(a => a.type !== 'bill_paid').reduce((s, a) => s + (a.amount || 0), 0);
+    const subtotal       = openingBalance + periodFare + periodBills;
+    const netBalance     = subtotal - periodPayments;
+
+    return { rider: r, periodTrips, periodAdv, openingBalance, periodFare, periodBills, periodPayments, subtotal, netBalance, myFin, myAdv };
+  }).filter(r => r.myFin.length > 0 || r.myAdv.length > 0);
+
+  const grandFare    = riderData.reduce((s, r) => s + r.periodFare, 0);
+  const grandBalance = riderData.reduce((s, r) => s + r.netBalance, 0);
+  const totalTrips   = riderData.reduce((s, r) => s + r.periodTrips.length, 0);
+
+  const periodLabel = period === 'today'  ? 'Today'
+                    : period === 'week'   ? 'This Week'
+                    : period === 'month'  ? 'This Month'
+                    : period === 'custom' ? `${fmtDatePk(customStart)} – ${fmtDatePk(customEnd)}`
+                    : 'All Time';
+
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Period filter */}
+      <div className="flex gap-1.5">
+        {[['today','Today'],['week','Week'],['month','Month'],['all','All'],['custom','Custom']].map(([k,l]) => (
+          <button key={k} onClick={() => setPeriod(k)}
+            className={`flex-1 py-2.5 text-[9px] font-black rounded-xl border-2 transition-all uppercase ${period === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {period === 'custom' && (
+        <div className="grid grid-cols-2 gap-2" dir="ltr">
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">From</label>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+          <div>
+            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">To</label>
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+              className="w-full bg-white border-2 border-blue-200 p-2.5 rounded-xl font-black text-sm outline-none focus:border-blue-500 text-slate-900" />
+          </div>
+        </div>
+      )}
+
+      {/* Summary banner */}
+      <div className="bg-blue-700 rounded-2xl p-4">
+        <div className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-2">{periodLabel} · {riderData.length} riders · {totalTrips} trips</div>
+        <div className="flex justify-between items-end">
+          <div>
+            <div className="text-[8px] font-black text-blue-300 uppercase">Total Earned</div>
+            <div className="font-black text-white text-2xl" dir="ltr">Rs.{grandFare.toLocaleString()}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[8px] font-black text-blue-300 uppercase">Net Payable</div>
+            <div className={`font-black text-xl ${grandBalance > 0 ? 'text-amber-300' : grandBalance < 0 ? 'text-emerald-300' : 'text-white'}`} dir="ltr">
+              Rs.{Math.abs(grandBalance).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {riderData.length === 0 && (
+        <div className="text-center py-12 text-slate-400 text-sm font-bold">No rider data for this period</div>
+      )}
+
+      {riderData.map(r => (
+        <RiderLedgerCard
+          key={r.rider.id}
+          r={r}
+          period={period}
+          showToast={showToast}
+          expanded={expandedId === r.rider.id}
+          onToggle={() => setExpandedId(expandedId === r.rider.id ? null : r.rider.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RiderLedgerCard({ r, period, showToast, expanded, onToggle }) {
+  const [showPay,  setShowPay]  = useState(false);
+  const [showBill, setShowBill] = useState(false);
+  const [payAmt,   setPayAmt]   = useState('');
+  const [payDate,  setPayDate]  = useState(getLocalDateStr());
+  const [payNote,  setPayNote]  = useState('');
+  const [billAmt,  setBillAmt]  = useState('');
+  const [billDate, setBillDate] = useState(getLocalDateStr());
+
+  const inp = "w-full bg-white border-2 border-slate-200 p-2.5 rounded-xl font-bold text-sm outline-none focus:border-blue-400 text-slate-900";
+  const lbl = 'text-[8px] font-black uppercase tracking-widest';
+  const isRickshaw = r.rider.type === 'rickshaw';
+
+  const savePayment = async () => {
+    const amt = parseFloat(payAmt);
+    if (!amt || amt <= 0) { showToast('Enter amount', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `pay_${Date.now()}`), {
+      riderId: r.rider.id, riderName: r.rider.name,
+      amount: amt, note: payNote.trim() || 'Salary Payment',
+      date: payDate, type: 'payment', createdAt: Date.now(),
+    });
+    setPayAmt(''); setPayNote(''); setShowPay(false);
+    showToast(`✓ Payment recorded for ${r.rider.name}`);
+  };
+
+  const saveBill = async () => {
+    const amt = parseFloat(billAmt);
+    if (!amt || amt <= 0) { showToast('Enter amount', 'error'); return; }
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'riderAdvances', `bill_${Date.now()}`), {
+      riderId: r.rider.id, riderName: r.rider.name,
+      amount: amt, type: 'bill_paid', note: 'T', date: billDate, createdAt: Date.now(),
+    });
+    setBillAmt(''); setShowBill(false);
+    showToast(`✓ T Bill recorded for ${r.rider.name}`);
+  };
+
+  const shareRiderReport = () => {
+    const text = buildRiderReport({
+      riderName: r.rider.name,
+      tripList: r.periodTrips,
+      advEntries: r.periodAdv,
+      totalFare: r.periodFare,
+      totalAdv: r.periodPayments,
+      billsPaid: r.periodBills,
+      netPayable: r.netBalance,
+    });
+    if (navigator.share) navigator.share({ title: `Report — ${r.rider.name}`, text });
+    else { navigator.clipboard.writeText(text); showToast('Report copied'); }
+  };
+
+  const sep = (thick = false) => (
+    <div className={`${thick ? 'border-t-2 border-slate-300' : 'border-t border-slate-100'} my-0.5`} />
+  );
+
+  const balColor = r.netBalance > 0 ? 'text-blue-700' : r.netBalance < 0 ? 'text-amber-600' : 'text-emerald-600';
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+      {/* Header — tap to expand */}
+      <button onClick={onToggle} className="w-full p-4 text-left">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="font-black text-slate-900 uppercase">{r.rider.name}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isRickshaw ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                {isRickshaw ? '🟡 Rickshaw' : '🟢 Bike'}
+              </span>
+              <span className="text-[8px] font-bold text-slate-400">{r.periodTrips.length} trip{r.periodTrips.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className={`font-black text-base ${balColor}`} dir="ltr">
+              {r.netBalance === 0 ? '✓ Settled' : `Rs.${Math.abs(r.netBalance).toLocaleString()}`}
+            </div>
+            <div className={`text-[8px] font-black uppercase ${balColor}`}>
+              {r.netBalance > 0 ? 'due' : r.netBalance < 0 ? 'overpaid' : ''}
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t-2 border-slate-50">
+          {/* Ledger rows */}
+          <div className="px-4 py-3">
+            {period !== 'all' && (
+              <>
+                <div className="flex justify-between items-center py-2">
+                  <div className={`${lbl} text-slate-500`}>Opening Balance b/f</div>
+                  <div className={`font-black text-sm ${r.openingBalance >= 0 ? 'text-slate-700' : 'text-emerald-600'}`} dir="ltr">
+                    {r.openingBalance === 0 ? '—' : `${r.openingBalance < 0 ? '−' : ''}Rs.${Math.abs(r.openingBalance).toLocaleString()}`}
+                  </div>
+                </div>
+                {sep()}
+              </>
+            )}
+
+            <div className="flex justify-between items-center py-2">
+              <div className={`${lbl} text-slate-500`}>Rides ({r.periodTrips.length}) +</div>
+              <div className="font-black text-sm text-slate-700" dir="ltr">Rs.{r.periodFare.toLocaleString()}</div>
+            </div>
+
+            {r.periodBills > 0 && (
+              <div className="flex justify-between items-center py-2">
+                <div className={`${lbl} text-purple-600`}>Transport Bills (T) +</div>
+                <div className="font-black text-sm text-purple-700" dir="ltr">Rs.{r.periodBills.toLocaleString()}</div>
+              </div>
+            )}
+
+            {sep()}
+            <div className="flex justify-between items-center py-2">
+              <div className={`${lbl} text-slate-400`}>Subtotal</div>
+              <div className="font-black text-sm text-slate-600" dir="ltr">Rs.{r.subtotal.toLocaleString()}</div>
+            </div>
+
+            {r.periodPayments > 0 && (
+              <div className="flex justify-between items-center py-2">
+                <div className={`${lbl} text-emerald-600`}>Payments Received (−)</div>
+                <div className="font-black text-sm text-emerald-600" dir="ltr">− Rs.{r.periodPayments.toLocaleString()}</div>
+              </div>
+            )}
+
+            {sep(true)}
+            <div className="flex justify-between items-center py-3">
+              <div className={`text-sm font-black ${balColor}`}>
+                {r.netBalance > 0 ? 'NET DUE' : r.netBalance < 0 ? 'OVERPAID' : '✓ SETTLED'}
+              </div>
+              <div className={`font-black text-2xl ${balColor}`} dir="ltr">
+                {r.netBalance === 0 ? '—' : `Rs.${Math.abs(r.netBalance).toLocaleString()}`}
+              </div>
+            </div>
+          </div>
+
+          {/* Trip detail (scrollable) */}
+          {r.periodTrips.length > 0 && (
+            <div className="px-4 pb-3">
+              <div className={`${lbl} text-slate-400 mb-2`}>Trips Detail</div>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {[...r.periodTrips].sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(d => (
+                  <div key={d.id} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-700 truncate">{URDU_AREA_NAMES?.[d.toArea] || d.toArea}</div>
+                      <div className="text-[8px] font-bold text-slate-400" dir="ltr">{fmtDatePk(d.date)}{d.tripCount > 1 ? ` · ×${d.tripCount}` : ''}</div>
+                    </div>
+                    <div className="font-black text-xs text-blue-700 shrink-0 ml-2" dir="ltr">Rs.{(d.finalFare||0).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Ledger entries (payments, advances, T bills) */}
+          {r.myAdv.length > 0 && (
+            <div className="px-4 pb-3">
+              <div className={`${lbl} text-slate-400 mb-2`}>Ledger Entries</div>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {[...r.myAdv].sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(a => {
+                  const isPay  = a.type === 'payment';
+                  const isBill = a.type === 'bill_paid';
+                  return (
+                    <div key={a.id} className={`flex justify-between items-center py-1.5 px-2 rounded-lg border ${isPay ? 'bg-emerald-50 border-emerald-100' : isBill ? 'bg-purple-50 border-purple-100' : 'bg-amber-50 border-amber-100'}`}>
+                      <div>
+                        <div className={`text-[8px] font-black uppercase ${isPay ? 'text-emerald-600' : isBill ? 'text-purple-600' : 'text-amber-600'}`}>
+                          {isPay ? '✅ Payment' : isBill ? '💸 T Bill' : '💰 Advance'}
+                        </div>
+                        <div className="text-[8px] font-bold text-slate-400" dir="ltr">{fmtDatePk(a.date)}</div>
+                      </div>
+                      <div className={`font-black text-xs ${isPay ? 'text-emerald-700' : isBill ? 'text-purple-700' : 'text-amber-700'}`} dir="ltr">
+                        Rs.{(a.amount||0).toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="px-4 pb-3 grid grid-cols-3 gap-2">
+            <button onClick={() => { setShowPay(v=>!v); setShowBill(false); }}
+              className={`py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all active:scale-95 ${showPay ? 'bg-blue-700 border-blue-700 text-white' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+              ✅ Pay
+            </button>
+            <button onClick={() => { setShowBill(v=>!v); setShowPay(false); }}
+              className={`py-2.5 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all active:scale-95 ${showBill ? 'bg-purple-700 border-purple-700 text-white' : 'bg-purple-50 border-purple-200 text-purple-700'}`}>
+              💸 T Bill
+            </button>
+            <button onClick={shareRiderReport}
+              className="py-2.5 text-[9px] font-black rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 uppercase tracking-widest transition-all active:scale-95">
+              📤 Report
+            </button>
+          </div>
+
+          {showPay && (
+            <div className="mx-4 mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-3 space-y-2">
+              <div className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Record Payment — {r.rider.name}</div>
+              <div className="grid grid-cols-2 gap-2" dir="ltr">
+                <input type="number" min="0"
+                  placeholder={r.netBalance > 0 ? `Rs.${r.netBalance.toLocaleString()}` : 'Amount'}
+                  value={payAmt} onChange={e => setPayAmt(e.target.value)} className={inp} />
+                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className={inp} />
+              </div>
+              <input placeholder="Note (e.g. weekly salary)" value={payNote} onChange={e => setPayNote(e.target.value)} className={inp} />
+              <div className="flex gap-2">
+                <button onClick={savePayment} className="flex-1 bg-blue-700 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                  Save Payment
+                </button>
+                <button onClick={() => setShowPay(false)} className="px-4 bg-slate-200 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">✕</button>
+              </div>
+            </div>
+          )}
+
+          {showBill && (
+            <div className="mx-4 mb-4 bg-purple-50 border-2 border-purple-200 rounded-xl p-3 space-y-2">
+              <div className="text-[9px] font-black text-purple-700 uppercase tracking-widest">T Bill paid by {r.rider.name} on our behalf</div>
+              <div className="grid grid-cols-2 gap-2" dir="ltr">
+                <input type="number" min="0" placeholder="Rs. Amount"
+                  value={billAmt} onChange={e => setBillAmt(e.target.value)} className={inp} />
+                <input type="date" value={billDate} onChange={e => setBillDate(e.target.value)} className={inp} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveBill} className="flex-1 bg-purple-700 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                  Save T Bill
+                </button>
+                <button onClick={() => setShowBill(false)} className="px-4 bg-slate-200 text-slate-600 font-black py-2.5 rounded-xl text-[10px] uppercase">✕</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Admin Dashboard (legacy — kept for compatibility)
 function AdminDashboard({ dispatches, riders, riderAdvances, showToast }) {
   const [range, setRange] = useState('today');
   const today      = getLocalDateStr();
