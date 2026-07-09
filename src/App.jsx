@@ -2787,14 +2787,23 @@ function AdminRidesView({ dispatches, riders, riderAdvances, rickshawAreaRates, 
 
 // ── Admin: Approval Queue ──────────────────────────────────────────────────
 function AdminApproval({ dispatches, showToast, ridesUser }) {
+  const [filter, setFilter] = useState('all');
+
   const pending = [...dispatches.filter(d => d.entryStatus === 'pending')]
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  const approveAll = async () => {
-    if (!pending.length) return;
-    if (!window.confirm(`Approve all ${pending.length} pending entries?`)) return;
+  const bikes     = pending.filter(d => d.riderType === 'bike');
+  const rickshaws = pending.filter(d => d.riderType === 'rickshaw');
+  const bykeas    = pending.filter(d => d.riderType === 'bykea');
+
+  const visible = filter === 'bike' ? bikes : filter === 'rickshaw' ? rickshaws : filter === 'bykea' ? bykeas : pending;
+
+  const approveVisible = async () => {
+    if (!visible.length) return;
+    const label = filter === 'all' ? `all ${visible.length}` : `${visible.length} ${filter}`;
+    if (!window.confirm(`Approve ${label} pending entries?`)) return;
     const chunks = [];
-    for (let i = 0; i < pending.length; i += 400) chunks.push(pending.slice(i, i + 400));
+    for (let i = 0; i < visible.length; i += 400) chunks.push(visible.slice(i, i + 400));
     for (const chunk of chunks) {
       const batch = writeBatch(db);
       chunk.forEach(d => batch.update(
@@ -2803,7 +2812,7 @@ function AdminApproval({ dispatches, showToast, ridesUser }) {
       ));
       await batch.commit();
     }
-    showToast(`✓ ${pending.length} entries approved`);
+    showToast(`✓ ${visible.length} entries approved`);
   };
 
   if (pending.length === 0) {
@@ -2816,18 +2825,41 @@ function AdminApproval({ dispatches, showToast, ridesUser }) {
     );
   }
 
+  const FILTERS = [
+    ['all',      `All · ${pending.length}`],
+    ...(bikes.length     ? [['bike',     `🟢 Bike · ${bikes.length}`]]     : []),
+    ...(rickshaws.length ? [['rickshaw', `🟡 Rickshaw · ${rickshaws.length}`]] : []),
+    ...(bykeas.length    ? [['bykea',    `🔵 Bykea · ${bykeas.length}`]]   : []),
+  ];
+
   return (
     <div className="space-y-3 pb-10">
+      {/* Filter pills */}
+      <div className="flex gap-1.5 flex-wrap">
+        {FILTERS.map(([k, l]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className={`py-2 px-3 text-[9px] font-black rounded-xl border-2 uppercase tracking-widest transition-all ${filter === k ? 'bg-blue-700 border-blue-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* Header row */}
       <div className="flex items-center justify-between px-1">
         <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
-          {pending.length} awaiting approval
+          {visible.length} awaiting approval
         </div>
-        <button onClick={approveAll}
+        <button onClick={approveVisible}
           className="bg-emerald-600 text-white font-black py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1.5">
-          <CheckCircle size={12}/> Approve All
+          <CheckCircle size={12}/> Approve {filter === 'all' ? 'All' : FILTERS.find(([k])=>k===filter)?.[1]?.split('·')[0]?.trim()}
         </button>
       </div>
-      {pending.map(d => (
+
+      {visible.length === 0 && (
+        <div className="text-center py-8 text-slate-400 text-xs font-bold">No pending {filter} entries</div>
+      )}
+
+      {visible.map(d => (
         <DispatchCard key={d.id} dispatch={d} isAdmin showToast={showToast} ridesUser={ridesUser} />
       ))}
     </div>
